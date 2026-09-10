@@ -133,7 +133,7 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
                 <select
                   id="ga-role"
                   value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as typeof form.role })}
                   className="h-9 w-full border border-input bg-card px-2.5 text-sm"
                 >
                   {ROLES.map((r) => (

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { signOut, useApp } from "@/lib/app-state";
 import {
+  LayoutDashboard,
   FolderOpen,
   FileText,
   Boxes,
@@ -23,6 +24,7 @@ import { CURRENT_USER, NOTIFICATIONS } from "@/lib/mock-data";
 import { Badge } from "@/components/kit";
 
 const NAV = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/cases", label: "Cases", icon: FolderOpen },
   { to: "/documents", label: "Documents", icon: FileText },
   { to: "/evidence", label: "Evidence", icon: Boxes },

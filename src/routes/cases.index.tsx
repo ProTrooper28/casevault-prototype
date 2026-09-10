@@ -29,7 +29,7 @@ const LAST_ACTIVITY: Record<string, string> = {
 };
 
 function Cases() {
-  const { session, evidence: runtimeEvidence } = useApp();
+  const { session, evidence: runtimeEvidence, documents: runtimeDocs } = useApp();
   const navigate = useNavigate();
   const searchParams = Route.useSearch();
   const [query, setQuery] = useState(searchParams.q ?? "");
@@ -171,7 +171,7 @@ function Cases() {
             {filtered.map((c) => {
               const docs =
                 DOCUMENTS.filter((d) => d.caseId === c.id).length +
-                (c.id === "FIR-2026-00124" ? 0 : 0);
+                runtimeDocs.filter((d) => d.caseId === c.id).length;
               const evd =
                 EVIDENCE_REGISTER.filter((e) => e.caseId === c.id).length +
                 runtimeEvidence.filter((e) => e.caseId === c.id).length;

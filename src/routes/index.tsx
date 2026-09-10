@@ -22,12 +22,12 @@ function Login() {
       return;
     }
     signIn("Rahul Mehta", "Police Investigator");
-    navigate({ to: "/cases" });
+    navigate({ to: "/dashboard" });
   }
 
   function guest() {
     signIn("Guest Investigator", "Police Investigator");
-    navigate({ to: "/cases" });
+    navigate({ to: "/dashboard" });
   }
 
   return (

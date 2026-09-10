@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Field, Td, Th } from "@/components/kit";
+import { Field, Mono, Td, Th } from "@/components/kit";
 import { Timeline } from "@/components/shared";
 import { CASES, getCase } from "@/lib/mock-data";
 import { caseTimeline } from "@/lib/case-timeline";
