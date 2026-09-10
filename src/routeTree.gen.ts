@@ -10,33 +10,219 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccessRouteImport } from './routes/access'
+import { Route as AiProcessingRouteImport } from './routes/ai-processing'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as IntegrityRouteImport } from './routes/integrity'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as CasesIndexRouteImport } from './routes/cases.index'
+import { Route as CasesCaseIdRouteImport } from './routes/cases.$caseId'
+import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
+import { Route as DocumentsDocIdRouteImport } from './routes/documents.$docId'
+import { Route as EvidenceIndexRouteImport } from './routes/evidence.index'
+import { Route as EvidenceEvdIdRouteImport } from './routes/evidence.$evdId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccessRoute = AccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiProcessingRoute = AiProcessingRouteImport.update({
+  id: '/ai-processing',
+  path: '/ai-processing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IntegrityRoute = IntegrityRouteImport.update({
+  id: '/integrity',
+  path: '/integrity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesIndexRoute = CasesIndexRouteImport.update({
+  id: '/cases/',
+  path: '/cases/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CasesCaseIdRoute = CasesCaseIdRouteImport.update({
+  id: '/cases/$caseId',
+  path: '/cases/$caseId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
+  id: '/documents/',
+  path: '/documents/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentsDocIdRoute = DocumentsDocIdRouteImport.update({
+  id: '/documents/$docId',
+  path: '/documents/$docId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvidenceIndexRoute = EvidenceIndexRouteImport.update({
+  id: '/evidence/',
+  path: '/evidence/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvidenceEvdIdRoute = EvidenceEvdIdRouteImport.update({
+  id: '/evidence/$evdId',
+  path: '/evidence/$evdId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
+  '/ai-processing': typeof AiProcessingRoute
+  '/audit': typeof AuditRoute
+  '/dashboard': typeof DashboardRoute
+  '/integrity': typeof IntegrityRoute
+  '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
+  '/documents/$docId': typeof DocumentsDocIdRoute
+  '/evidence/$evdId': typeof EvidenceEvdIdRoute
+  '/cases/': typeof CasesIndexRoute
+  '/documents/': typeof DocumentsIndexRoute
+  '/evidence/': typeof EvidenceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
+  '/ai-processing': typeof AiProcessingRoute
+  '/audit': typeof AuditRoute
+  '/dashboard': typeof DashboardRoute
+  '/integrity': typeof IntegrityRoute
+  '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
+  '/documents/$docId': typeof DocumentsDocIdRoute
+  '/evidence/$evdId': typeof EvidenceEvdIdRoute
+  '/cases': typeof CasesIndexRoute
+  '/documents': typeof DocumentsIndexRoute
+  '/evidence': typeof EvidenceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/access': typeof AccessRoute
+  '/ai-processing': typeof AiProcessingRoute
+  '/audit': typeof AuditRoute
+  '/dashboard': typeof DashboardRoute
+  '/integrity': typeof IntegrityRoute
+  '/profile': typeof ProfileRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/cases/$caseId': typeof CasesCaseIdRoute
+  '/documents/$docId': typeof DocumentsDocIdRoute
+  '/evidence/$evdId': typeof EvidenceEvdIdRoute
+  '/cases/': typeof CasesIndexRoute
+  '/documents/': typeof DocumentsIndexRoute
+  '/evidence/': typeof EvidenceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/access'
+    | '/ai-processing'
+    | '/audit'
+    | '/dashboard'
+    | '/integrity'
+    | '/profile'
+    | '/search'
+    | '/settings'
+    | '/cases/$caseId'
+    | '/documents/$docId'
+    | '/evidence/$evdId'
+    | '/cases/'
+    | '/documents/'
+    | '/evidence/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/access'
+    | '/ai-processing'
+    | '/audit'
+    | '/dashboard'
+    | '/integrity'
+    | '/profile'
+    | '/search'
+    | '/settings'
+    | '/cases/$caseId'
+    | '/documents/$docId'
+    | '/evidence/$evdId'
+    | '/cases'
+    | '/documents'
+    | '/evidence'
+  id:
+    | '__root__'
+    | '/'
+    | '/access'
+    | '/ai-processing'
+    | '/audit'
+    | '/dashboard'
+    | '/integrity'
+    | '/profile'
+    | '/search'
+    | '/settings'
+    | '/cases/$caseId'
+    | '/documents/$docId'
+    | '/evidence/$evdId'
+    | '/cases/'
+    | '/documents/'
+    | '/evidence/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccessRoute: typeof AccessRoute
+  AiProcessingRoute: typeof AiProcessingRoute
+  AuditRoute: typeof AuditRoute
+  DashboardRoute: typeof DashboardRoute
+  IntegrityRoute: typeof IntegrityRoute
+  ProfileRoute: typeof ProfileRoute
+  SearchRoute: typeof SearchRoute
+  SettingsRoute: typeof SettingsRoute
+  CasesCaseIdRoute: typeof CasesCaseIdRoute
+  DocumentsDocIdRoute: typeof DocumentsDocIdRoute
+  EvidenceEvdIdRoute: typeof EvidenceEvdIdRoute
+  CasesIndexRoute: typeof CasesIndexRoute
+  DocumentsIndexRoute: typeof DocumentsIndexRoute
+  EvidenceIndexRoute: typeof EvidenceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +234,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/access': {
+      id: '/access'
+      path: '/access'
+      fullPath: '/access'
+      preLoaderRoute: typeof AccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-processing': {
+      id: '/ai-processing'
+      path: '/ai-processing'
+      fullPath: '/ai-processing'
+      preLoaderRoute: typeof AiProcessingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit': {
+      id: '/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/integrity': {
+      id: '/integrity'
+      path: '/integrity'
+      fullPath: '/integrity'
+      preLoaderRoute: typeof IntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/': {
+      id: '/cases/'
+      path: '/cases'
+      fullPath: '/cases/'
+      preLoaderRoute: typeof CasesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cases/$caseId': {
+      id: '/cases/$caseId'
+      path: '/cases/$caseId'
+      fullPath: '/cases/$caseId'
+      preLoaderRoute: typeof CasesCaseIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documents/': {
+      id: '/documents/'
+      path: '/documents'
+      fullPath: '/documents/'
+      preLoaderRoute: typeof DocumentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documents/$docId': {
+      id: '/documents/$docId'
+      path: '/documents/$docId'
+      fullPath: '/documents/$docId'
+      preLoaderRoute: typeof DocumentsDocIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evidence/': {
+      id: '/evidence/'
+      path: '/evidence'
+      fullPath: '/evidence/'
+      preLoaderRoute: typeof EvidenceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evidence/$evdId': {
+      id: '/evidence/$evdId'
+      path: '/evidence/$evdId'
+      fullPath: '/evidence/$evdId'
+      preLoaderRoute: typeof EvidenceEvdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccessRoute: AccessRoute,
+  AiProcessingRoute: AiProcessingRoute,
+  AuditRoute: AuditRoute,
+  DashboardRoute: DashboardRoute,
+  IntegrityRoute: IntegrityRoute,
+  ProfileRoute: ProfileRoute,
+  SearchRoute: SearchRoute,
+  SettingsRoute: SettingsRoute,
+  CasesCaseIdRoute: CasesCaseIdRoute,
+  DocumentsDocIdRoute: DocumentsDocIdRoute,
+  EvidenceEvdIdRoute: EvidenceEvdIdRoute,
+  CasesIndexRoute: CasesIndexRoute,
+  DocumentsIndexRoute: DocumentsIndexRoute,
+  EvidenceIndexRoute: EvidenceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

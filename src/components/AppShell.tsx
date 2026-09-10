@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
+import { signOut, useApp } from "@/lib/app-state";
 import {
-  LayoutDashboard,
   FolderOpen,
   FileText,
   Boxes,
@@ -23,7 +23,6 @@ import { CURRENT_USER, NOTIFICATIONS } from "@/lib/mock-data";
 import { Badge } from "@/components/kit";
 
 const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/cases", label: "Cases", icon: FolderOpen },
   { to: "/documents", label: "Documents", icon: FileText },
   { to: "/evidence", label: "Evidence", icon: Boxes },
@@ -44,6 +43,7 @@ const linkBase =
 const linkActive = "bg-sidebar-active text-sidebar-foreground";
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const navigate = useNavigate();
   return (
     <div className="flex h-full flex-col bg-sidebar">
       <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-3.5">
@@ -87,10 +87,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <span className="truncate">{label}</span>
           </Link>
         ))}
-        <Link to="/" onClick={onNavigate} className={linkBase}>
+        <button
+          onClick={() => {
+            signOut();
+            onNavigate?.();
+            navigate({ to: "/" });
+          }}
+          className={linkBase}
+        >
           <LogOut className="size-4 shrink-0" />
           <span className="truncate">Sign out</span>
-        </Link>
+        </button>
       </div>
     </div>
   );
@@ -101,6 +108,14 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   const [notifOpen, setNotifOpen] = useState(false);
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { session } = useApp();
+  const userName = session?.name ?? CURRENT_USER.name;
+  const userRole = session?.role ?? CURRENT_USER.role;
+  const initials = userName
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("");
 
   return (
     <div className="min-h-screen bg-background">
@@ -195,11 +210,11 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
               className="flex items-center gap-2 rounded border border-border px-2 py-1.5 hover:bg-secondary"
             >
               <span className="flex size-6 items-center justify-center rounded bg-primary text-[11px] font-semibold text-primary-foreground">
-                GI
+                {initials}
               </span>
               <span className="hidden text-left leading-tight sm:block">
-                <span className="block text-[12.5px] font-semibold">{CURRENT_USER.name}</span>
-                <span className="block text-[11px] text-muted-foreground">{CURRENT_USER.role}</span>
+                <span className="block text-[12.5px] font-semibold">{userName}</span>
+                <span className="block text-[11px] text-muted-foreground">{userRole}</span>
               </span>
             </Link>
           </div>

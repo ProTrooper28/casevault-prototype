@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, createLink } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { IntegrityStatus } from "@/lib/mock-data";
@@ -41,19 +41,19 @@ export function Btn({
   );
 }
 
-export function BtnLink({
+/**
+ * Router-aware styled link. Built with createLink so `to` / `params` / `search`
+ * keep TanStack Router's full type-safety (a plain ComponentProps<typeof Link>
+ * wrapper would degrade to AnyRouter and break `params` typing).
+ */
+export const BtnLink = createLink(function BtnLinkHost({
   variant = "primary",
   size = "md",
   className,
   ...props
-}: ComponentProps<typeof Link> & { variant?: BtnVariant; size?: BtnSize }) {
-  return (
-    <Link
-      className={cn(btnBase, btnVariants[variant], btnSizes[size], className)}
-      {...props}
-    />
-  );
-}
+}: ComponentProps<"a"> & { variant?: BtnVariant; size?: BtnSize }) {
+  return <a className={cn(btnBase, btnVariants[variant], btnSizes[size], className)} {...props} />;
+});
 
 /* ---------------------------------- Panel ---------------------------------- */
 
