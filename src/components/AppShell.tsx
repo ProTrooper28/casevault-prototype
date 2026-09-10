@@ -17,8 +17,8 @@ import {
   X,
   Sparkles,
   LogOut,
-  ShieldHalf,
 } from "lucide-react";
+import { BrandLockup, BrandMark } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 import { CURRENT_USER, NOTIFICATIONS } from "@/lib/mock-data";
 import { Badge } from "@/components/kit";
@@ -48,14 +48,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-3.5">
-        <span className="flex size-8 items-center justify-center rounded bg-sidebar-active text-sidebar-foreground">
-          <ShieldHalf className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-sidebar-foreground">CaseVault AI</p>
-          <p className="truncate text-[11px] text-sidebar-muted">NCRB · Prototype</p>
-        </div>
+      <div className="flex items-center border-b border-sidebar-border px-4 py-3">
+        <BrandLockup tone="light" markClassName="size-8" tagline />
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 py-3">
@@ -226,9 +220,14 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
           {children}
         </main>
 
-        <footer className="border-t border-border px-5 py-3 text-[11.5px] text-muted-foreground">
-          CaseVault AI — SIH 2026 prototype (SIH26190). Demo data only.{" "}
-          <Badge tone="ai">Prototype</Badge>
+        <footer className="border-t border-border px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <BrandMark className="size-4" /> CaseVault AI — SIH 2026 prototype (SIH26190).
+              Demo data only.
+            </span>
+            <Badge tone="ai">Prototype</Badge>
+          </div>
         </footer>
       </div>
     </div>

@@ -1,0 +1,124 @@
+import { cn } from "@/lib/utils";
+
+/**
+ * CaseVault AI brand mark — navy shield, case documents, scales of justice
+ * and a locked case folder. Recreated as vector art from the official logo.
+ * Gradient IDs are static because every instance renders identical defs.
+ */
+export function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 512 512"
+      role="img"
+      aria-label="CaseVault AI"
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="cvShield" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#1E5FBF" />
+          <stop offset="0.55" stopColor="#12408F" />
+          <stop offset="1" stopColor="#0C2D6B" />
+        </linearGradient>
+        <linearGradient id="cvFolder" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#3D77D4" />
+          <stop offset="1" stopColor="#17497F" />
+        </linearGradient>
+        <linearGradient id="cvPaper" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" />
+          <stop offset="1" stopColor="#DDE8F5" />
+        </linearGradient>
+      </defs>
+
+      {/* Shield */}
+      <path
+        d="M256 28 L470 98 V266 C470 376 382 448 256 486 C130 448 42 376 42 266 V98 Z"
+        fill="url(#cvShield)"
+      />
+
+      {/* Scales of justice */}
+      <g fill="#EAF2FC">
+        <circle cx="335" cy="108" r="9" />
+        <rect x="330" y="116" width="10" height="140" rx="5" />
+        <rect x="292" y="112" width="86" height="10" rx="5" />
+        <path d="M298 130 l-32 56 h64 Z" opacity="0.95" />
+        <path d="M372 130 l-32 56 h64 Z" opacity="0.95" />
+        <rect x="303" y="252" width="64" height="9" rx="4.5" />
+      </g>
+
+      {/* Back document */}
+      <rect x="170" y="140" width="110" height="138" rx="10" fill="#C7D8EE" />
+      <g fill="#7FA3CF">
+        <rect x="184" y="160" width="82" height="8" rx="4" />
+        <rect x="184" y="178" width="82" height="8" rx="4" />
+        <rect x="184" y="196" width="60" height="8" rx="4" />
+      </g>
+
+      {/* Front document (dog-eared) */}
+      <path
+        d="M148 200 H218 L252 234 V332 Q252 340 244 340 H156 Q148 340 148 332 Z"
+        fill="url(#cvPaper)"
+      />
+      <path d="M218 200 V234 H252 Z" fill="#A9C2E4" />
+      <g fill="#3D77D4">
+        <rect x="164" y="248" width="72" height="8" rx="4" />
+        <rect x="164" y="264" width="72" height="8" rx="4" />
+        <rect x="164" y="280" width="52" height="8" rx="4" />
+      </g>
+
+      {/* Locked case folder */}
+      <path
+        d="M112 296 H212 L230 318 H392 Q406 318 406 332 V412 Q406 426 392 426 H126 Q112 426 112 412 Z"
+        fill="url(#cvFolder)"
+      />
+      <path
+        d="M226 322 v-14 a14 14 0 0 1 28 0 v14"
+        stroke="#0F2F63"
+        strokeWidth="14"
+        fill="none"
+      />
+      <rect x="196" y="318" width="88" height="66" rx="10" fill="#0F2F63" />
+      <circle cx="240" cy="344" r="10" fill="#EAF2FC" />
+      <path d="M235 346 h10 l5 20 h-20 Z" fill="#EAF2FC" />
+    </svg>
+  );
+}
+
+/** Horizontal lockup: mark + "CaseVault AI" wordmark (dark text for light surfaces). */
+export function BrandLockup({
+  className,
+  markClassName,
+  tone = "dark",
+  tagline = false,
+}: {
+  className?: string;
+  markClassName?: string;
+  tone?: "dark" | "light";
+  tagline?: boolean;
+}) {
+  return (
+    <span className={cn("inline-flex items-center gap-2.5", className)}>
+      <BrandMark className={cn("size-9", markClassName)} />
+      <span className="min-w-0 leading-none">
+        <span
+          className={cn(
+            "block text-[17px] font-bold tracking-tight",
+            tone === "dark" ? "text-primary" : "text-sidebar-foreground",
+          )}
+        >
+          CaseVault{" "}
+          <span className={tone === "dark" ? "text-[#1E5FBF]" : "text-[#7FB0F0]"}>AI</span>
+        </span>
+        {tagline ? (
+          <span
+            className={cn(
+              "mt-1 block text-[9.5px] font-semibold tracking-[0.14em] uppercase",
+              tone === "dark" ? "text-muted-foreground" : "text-sidebar-muted",
+            )}
+          >
+            Secure evidence. Stronger justice.
+          </span>
+        ) : null}
+      </span>
+    </span>
+  );
+}

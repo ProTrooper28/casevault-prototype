@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ShieldHalf, Lock, ArrowRight, Fingerprint } from "lucide-react";
+import { Lock, ArrowRight, Fingerprint } from "lucide-react";
+import { BrandMark } from "@/components/BrandLogo";
 import { Badge, Btn } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,11 +45,13 @@ function Login() {
           }}
         />
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded bg-sidebar-active">
-            <ShieldHalf className="size-5" />
+          <span className="flex size-11 items-center justify-center rounded bg-white p-1.5 shadow-sm">
+            <BrandMark className="size-full" />
           </span>
           <div>
-            <p className="text-base font-semibold">CaseVault AI</p>
+            <p className="text-base font-semibold">
+              CaseVault <span className="text-[#7FB0F0]">AI</span>
+            </p>
             <p className="text-[11.5px] tracking-wide text-sidebar-muted uppercase">
               NCRB · SIH26190
             </p>
@@ -89,10 +92,10 @@ function Login() {
       <div className="flex flex-1 items-center justify-center px-5 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="flex size-9 items-center justify-center rounded bg-primary text-primary-foreground">
-              <ShieldHalf className="size-4.5" />
-            </span>
-            <p className="text-base font-semibold">CaseVault AI</p>
+            <BrandMark className="size-9" />
+            <p className="text-base font-semibold">
+              CaseVault <span className="text-[#1E5FBF]">AI</span>
+            </p>
           </div>
 
           <h1 className="text-xl font-semibold">Sign in to CaseVault AI</h1>
