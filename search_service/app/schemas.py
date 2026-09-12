@@ -28,3 +28,23 @@ class SearchResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
+
+class GlobalSearchRequest(BaseModel):
+    query: str
+    top_k: int = 5
+    min_similarity: float = 0.15
+
+
+class GlobalSearchResultItem(BaseModel):
+    case_id: str
+    case_title: str
+    document_id: str
+    source_filename: str
+    chunk_text: str
+    similarity: float
+
+
+class GlobalSearchResponse(BaseModel):
+    query: str
+    results: List[GlobalSearchResultItem]
+    message: Optional[str] = None

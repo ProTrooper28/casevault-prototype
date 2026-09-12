@@ -9,6 +9,9 @@ from app.schemas import (
     SearchRequest,
     SearchResponse,
     SearchResultItem,
+    GlobalSearchRequest,
+    GlobalSearchResponse,
+    GlobalSearchResultItem,
 )
 from app import search_service
 
@@ -71,3 +74,32 @@ def search(req: SearchRequest):
     ]
 
     return SearchResponse(query=req.query, results=result_items)
+
+@app.post("/search/query/global", response_model=GlobalSearchResponse)
+def search_global(req: GlobalSearchRequest):
+    rows = search_service.search_global(
+        query=req.query,
+        top_k=req.top_k,
+        min_similarity=req.min_similarity,
+    )
+
+    if not rows:
+        return GlobalSearchResponse(
+            query=req.query,
+            results=[],
+            message="No relevant results found across any case.",
+        )
+
+    result_items = [
+        GlobalSearchResultItem(
+            case_id=row["case_id"],
+            case_title=row["case_title"],
+            document_id=row["document_id"],
+            source_filename=row["source_filename"] or "",
+            chunk_text=row["chunk_text"],
+            similarity=round(row["similarity"], 3),
+        )
+        for row in rows
+    ]
+
+    return GlobalSearchResponse(query=req.query, results=result_items)

@@ -86,3 +86,22 @@ def search(
     ).execute()
 
     return result.data or []
+
+def search_global(query: str, top_k: int = 5, min_similarity: float = 0.15) -> List[dict]:
+    """
+    Same as search(), but not scoped to one case — searches every
+    case's indexed documents. Used for "which case mentions a white
+    van" rather than "search within the case I already have open".
+    """
+    query_vector = embed_texts([query])[0].tolist()
+
+    result = supabase.rpc(
+        "match_document_chunks_global",
+        {
+            "query_embedding": query_vector,
+            "match_count": top_k,
+            "similarity_threshold": min_similarity,
+        },
+    ).execute()
+
+    return result.data or []
