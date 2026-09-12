@@ -52,6 +52,7 @@ def search(req: SearchRequest):
     rows = search_service.search(
         case_id=req.case_id,
         query=req.query,
+        requesting_officer_id=req.requesting_officer_id,
         top_k=req.top_k,
         min_similarity=req.min_similarity,
     )
@@ -79,6 +80,7 @@ def search(req: SearchRequest):
 def search_global(req: GlobalSearchRequest):
     rows = search_service.search_global(
         query=req.query,
+        requesting_officer_id=req.requesting_officer_id,
         top_k=req.top_k,
         min_similarity=req.min_similarity,
     )

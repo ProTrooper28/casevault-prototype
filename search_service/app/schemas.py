@@ -12,6 +12,7 @@ class IndexDocumentResponse(BaseModel):
 class SearchRequest(BaseModel):
     case_id: str
     query: str
+    requesting_officer_id: str
     top_k: int = 5
     min_similarity: float = 0.15
 
@@ -31,6 +32,7 @@ class HealthResponse(BaseModel):
 
 class GlobalSearchRequest(BaseModel):
     query: str
+    requesting_officer_id: str
     top_k: int = 5
     min_similarity: float = 0.15
 

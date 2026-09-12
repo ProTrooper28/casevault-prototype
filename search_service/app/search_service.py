@@ -60,19 +60,9 @@ def index_document(document_id: str) -> dict:
         "chunks_indexed": len(rows),
     }
 
-
 def search(
-    case_id: str, query: str, top_k: int = 5, min_similarity: float = 0.15
+    case_id: str, query: str, requesting_officer_id: str, top_k: int = 5, min_similarity: float = 0.15
 ) -> List[dict]:
-    """
-    Natural-language search within one case. Calls a Postgres FUNCTION
-    (via .rpc()) so pgvector computes cosine distance and sorts by it
-    INSIDE Postgres, using an index — instead of pulling every vector
-    into Python. `similarity = 1 - distance`.
-
-    Requires supabase_search_function.sql to already be run in the
-    Supabase SQL Editor.
-    """
     query_vector = embed_texts([query])[0].tolist()
 
     result = supabase.rpc(
@@ -80,6 +70,7 @@ def search(
         {
             "query_embedding": query_vector,
             "match_case_id": case_id,
+            "requesting_officer_id": requesting_officer_id,
             "match_count": top_k,
             "similarity_threshold": min_similarity,
         },
@@ -87,18 +78,17 @@ def search(
 
     return result.data or []
 
-def search_global(query: str, top_k: int = 5, min_similarity: float = 0.15) -> List[dict]:
-    """
-    Same as search(), but not scoped to one case — searches every
-    case's indexed documents. Used for "which case mentions a white
-    van" rather than "search within the case I already have open".
-    """
+
+def search_global(
+    query: str, requesting_officer_id: str, top_k: int = 5, min_similarity: float = 0.15
+) -> List[dict]:
     query_vector = embed_texts([query])[0].tolist()
 
     result = supabase.rpc(
         "match_document_chunks_global",
         {
             "query_embedding": query_vector,
+            "requesting_officer_id": requesting_officer_id,
             "match_count": top_k,
             "similarity_threshold": min_similarity,
         },
