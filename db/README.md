@@ -108,3 +108,47 @@ permissioned.
 ## Files
 
 - `schema.sql` — the full schema, in dependency order, heavily commented.
+
+## Migration 002 — Field-level extraction confidence + case search
+
+Adds three things on top of the base schema, without touching existing data:
+
+- **`extracted_fields`** — one row per extracted field per document
+  (`field_name`, `extracted_value`, `confidence_score`, `review_status`).
+  This is what the frontend reads to show a confidence badge next to
+  each OCR'd field and let an officer confirm/correct it. The
+  confidence *threshold* itself (e.g. "flag under 85%") is deliberately
+  NOT in the DB — keep that in FastAPI/frontend config so it can change
+  without a migration.
+- **`documents.extraction_status`** — tracks OCR pipeline state
+  (`pending`/`processing`/`completed`/`failed`), separate from
+  `documents.status` which tracks human verification.
+- **`cases.search_vector`** — full-text search column (auto-maintained
+  by a trigger) covering case title, FIR number, CNR, court case
+  number, and description. Powers the "search for an existing case to
+  add documents to" flow. Query it with:
+  ```sql
+  select * from cases
+  where search_vector @@ websearch_to_tsquery('english', '<search text>');
+  ```
+
+### New-case vs. existing-case upload flow
+
+No new tables needed for this beyond the above — `cases.id` already is
+the unique case ID, and every row in `documents` already carries a
+`case_id`. So:
+
+- **New case**: create a `cases` row first (new `id`), then insert the
+  uploaded document(s) with that `case_id`.
+- **Existing case**: search `cases` via `search_vector`, let the officer
+  pick one, then insert the new document with that existing `case_id`.
+
+Any documents sharing a `case_id` are correlated by definition — that's
+the whole mechanism, no extra "correlation" table required.
+
+### Files
+
+- `002_extracted_fields_and_search.sql` — run this once, after
+  `schema.sql`, in the SQL Editor. Safe to run on a database that
+  already has real data (uses `if not exists` / `if not exists`
+  guards throughout).
