@@ -185,3 +185,53 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
 }
+
+/* ── Login page animations ──────────────────────────────────────────────── */
+
+@keyframes flag-drift {
+  0%   { transform: translateY(0px) rotate(-0.4deg); }
+  40%  { transform: translateY(-6px) rotate(0.3deg); }
+  70%  { transform: translateY(-2px) rotate(-0.2deg); }
+  100% { transform: translateY(0px) rotate(-0.4deg); }
+}
+
+@keyframes atmos-pulse {
+  0%   { opacity: 0.38; }
+  50%  { opacity: 0.52; }
+  100% { opacity: 0.38; }
+}
+
+@keyframes hero-fadein {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-fadein {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes grid-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 44px 44px; }
+}
+
+.login-flag-wrap {
+  animation: flag-drift 9s ease-in-out infinite;
+  transform-origin: 4% 12%;
+}
+
+.login-atmos {
+  animation: atmos-pulse 12s ease-in-out infinite;
+}
+
+.login-hero {
+  animation: hero-fadein 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.1s;
+}
+
+.login-cards {
+  animation: card-fadein 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.35s;
+}
+
