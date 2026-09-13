@@ -141,3 +141,144 @@ export function GovFooterLine({ className }: { className?: string }) {
     </span>
   );
 }
+
+/**
+ * Waving Indian tricolour — premium cloth treatment for dark hero backdrops.
+ * The fabric is a flying flag: band edges follow a real wave function sampled
+ * into smooth curved paths (not a bent rectangle), with travelling fold
+ * shadows, a soft daylight sheen and a centred 24-spoke Chakra riding the
+ * wave. Static and lightweight; fade/blend is handled by the caller via CSS
+ * mask so edges never read as a pasted rectangle.
+ */
+export function WavingFlag({ className }: { className?: string }) {
+  const spokes = Array.from({ length: 24 }, (_, i) => (i * 360) / 24);
+
+  // --- Fabric geometry (3:2 flag, three equal bands along one wave) ---
+  const X0 = 20;
+  const X1 = 252;
+  const FLAG_W = X1 - X0;
+  const BH = 150 / 3; // band height for a 150 tall flag
+
+  /** Top edge of the fabric — two superposed gentle waves. */
+  const topY = (x: number) =>
+    40 +
+    13 * Math.sin(((x - X0) / FLAG_W) * Math.PI * 1.15) +
+    5 * Math.sin(((x - X0) / FLAG_W) * Math.PI * 2.6 + 0.8);
+  const edgeY = (k: number) => (x: number) => topY(x) + k * BH;
+
+  /** Closed path for band k → k+1 following the wave. */
+  const bandPath = (k: number): string => {
+    const steps = 28;
+    const d: string[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const x = X0 + (FLAG_W * i) / steps;
+      d.push(`${i === 0 ? "M" : "L"}${x.toFixed(1)} ${edgeY(k)(x).toFixed(1)}`);
+    }
+    for (let i = steps; i >= 0; i--) {
+      const x = X0 + (FLAG_W * i) / steps;
+      d.push(`L${x.toFixed(1)} ${edgeY(k + 1)(x).toFixed(1)}`);
+    }
+    return `${d.join(" ")} Z`;
+  };
+
+  const bandColors = ["#FF9933", "#F7F9FC", "#138808"];
+
+  // Chakra rides the centre of the white band.
+  const chakraX = (X0 + X1) / 2;
+  const chakraY = topY(chakraX) + BH * 1.5;
+
+  return (
+    <svg
+      viewBox="0 0 300 240"
+      role="img"
+      aria-label="Flag of India"
+      className={cn("shrink-0", className)}
+    >
+      <defs>
+        <linearGradient id="wfPole" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#E2E7EF" />
+          <stop offset="0.5" stopColor="#9AA2B2" />
+          <stop offset="1" stopColor="#5F6776" />
+        </linearGradient>
+        {/* Travelling fold shadows — aligned with the wave crests/troughs */}
+        <linearGradient id="wfFolds" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#0A1730" stopOpacity="0.24" />
+          <stop offset="0.1" stopColor="#0A1730" stopOpacity="0.02" />
+          <stop offset="0.26" stopColor="#0A1730" stopOpacity="0.14" />
+          <stop offset="0.42" stopColor="#0A1730" stopOpacity="0.02" />
+          <stop offset="0.58" stopColor="#0A1730" stopOpacity="0.17" />
+          <stop offset="0.74" stopColor="#0A1730" stopOpacity="0.04" />
+          <stop offset="0.9" stopColor="#0A1730" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#0A1730" stopOpacity="0.1" />
+        </linearGradient>
+        {/* Soft top-left daylight sheen */}
+        <linearGradient id="wfSheen" x1="0" y1="0" x2="0.75" y2="1">
+          <stop offset="0" stopColor="#FFFFFF" stopOpacity="0.2" />
+          <stop offset="0.4" stopColor="#FFFFFF" stopOpacity="0.05" />
+          <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Pole + gold finial */}
+      <rect x="9" y="26" width="4.5" height="208" rx="2.25" fill="url(#wfPole)" />
+      <circle cx="11.25" cy="19" r="5.2" fill="#D8B64A" />
+      <circle cx="11.25" cy="17.8" r="2.1" fill="#F4E09A" />
+
+      {/* Saffron → White → India green, each following the wave */}
+      <path d={bandPath(0)} fill={bandColors[0]} />
+      <path d={bandPath(1)} fill={bandColors[1]} />
+      <path d={bandPath(2)} fill={bandColors[2]} />
+
+      {/* Ashoka Chakra — centred on the white band, riding the wave */}
+      <g transform={`translate(${chakraX.toFixed(1)} ${chakraY.toFixed(1)})`}>
+        <circle r="20" fill="none" stroke="#26418F" strokeWidth="2.2" />
+        <circle r="16.4" fill="none" stroke="#26418F" strokeWidth="0.7" opacity="0.5" />
+        <circle r="2.7" fill="#26418F" />
+        {spokes.map((deg) => (
+          <line
+            key={deg}
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="-16.2"
+            stroke="#26418F"
+            strokeWidth="1"
+            transform={`rotate(${deg})`}
+          />
+        ))}
+      </g>
+
+      {/* Cloth dimension: fold shadows + sheen clipped to the waved fabric */}
+      <path d={bandPath(0)} fill="url(#wfFolds)" />
+      <path d={bandPath(1)} fill="url(#wfFolds)" />
+      <path d={bandPath(2)} fill="url(#wfFolds)" />
+      <path d={bandPath(0)} fill="url(#wfSheen)" />
+      <path d={bandPath(1)} fill="url(#wfSheen)" />
+      <path d={bandPath(2)} fill="url(#wfSheen)" />
+    </svg>
+  );
+}
+
+/**
+ * Faint parliament-style colonnade silhouette — an ambient institutional
+ * hint for dark hero backdrops. Render at very low opacity only.
+ */
+export function ParliamentHint({ className }: { className?: string }) {
+  const columns = Array.from({ length: 8 }, (_, i) => 84 + i * 56);
+  return (
+    <svg
+      viewBox="0 0 560 200"
+      aria-hidden
+      className={cn("pointer-events-none shrink-0", className)}
+    >
+      <g fill="white">
+        <path d="M64 62 L280 16 L496 62 Z" opacity="0.9" />
+        <rect x="44" y="66" width="472" height="9" rx="2" />
+        {columns.map((x) => (
+          <rect key={x} x={x} y="82" width="22" height="106" rx="3" />
+        ))}
+        <rect x="36" y="194" width="488" height="6" rx="2" />
+      </g>
+    </svg>
+  );
+}
