@@ -44,6 +44,18 @@ export async function uploadCaseFile(
   return { ok: true, path, bucket: STORAGE_BUCKET };
 }
 
+/** Download the actual stored bytes for integrity verification. */
+export async function downloadCaseFile(
+  path: string,
+): Promise<{ ok: true; blob: Blob } | { ok: false; error: string }> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, error: "Supabase is not connected." };
+  const { data, error } = await sb.storage.from(STORAGE_BUCKET).download(path);
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Empty response from storage." };
+  return { ok: true, blob: data };
+}
+
 /** Signed URL for viewing an uploaded file (1 hour). */
 export async function caseFileUrl(path: string): Promise<string | null> {
   const sb = getSupabase();

@@ -7,7 +7,8 @@ import {
   type EvidenceRow,
 } from "@/lib/supabase";
 import type { RegisterEvidence } from "@/lib/evidence-register";
-import { uploadCaseFile } from "@/lib/storage";
+import { uploadCaseFile, downloadCaseFile } from "@/lib/storage";
+import { calculateSha256 } from "@/lib/hash";
 import { getAppState } from "@/lib/app-state";
 
 /* -------------------------------------------------------------------------- */
@@ -117,8 +118,8 @@ export type UploadDocInput = {
 };
 
 export type UploadResult =
-  | { ok: true; document: Document; evidence: RegisterEvidence | null }
-  | { ok: false; error: string; stage: "storage" | "documents" | "evidence" };
+  | { ok: true; document: Document; evidence: RegisterEvidence | null; sha256: string }
+  | { ok: false; error: string; stage: "storage" | "hash" | "documents" | "evidence" };
 
 /**
  * Real upload pipeline:
@@ -140,6 +141,18 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
   const stored = await uploadCaseFile(input.caseId, input.file);
   if (!stored.ok) return { ok: false, stage: "storage", error: stored.error };
 
+  // 2. Real SHA-256 from the exact same File object bytes (Web Crypto).
+  let sha256: string;
+  try {
+    sha256 = await calculateSha256(input.file);
+  } catch (err) {
+    return {
+      ok: false,
+      stage: "hash",
+      error: err instanceof Error ? err.message : "Could not calculate SHA-256 of the file.",
+    };
+  }
+
   const session = getAppState().session;
   const docId = nextDocId();
   const document: Document = {
@@ -151,9 +164,9 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
     uploadedBy: session?.name ?? "Rahul Mehta",
     date: displayDate(),
     version: "1.0",
-    integrity: "pending",
+    integrity: "verified",
     access: "Internal",
-    hash: "— (pending hashing stage)",
+    hash: sha256,
     pages: 1,
     caseType: "General",
     location: "—",
@@ -169,13 +182,13 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
     summary: input.notes?.trim() || `Uploaded file pending processing (${input.docType}).`,
   };
 
-  // 2. Metadata row → public.documents
+  // 3. Metadata row → public.documents (sha256 = real fingerprint of the stored bytes)
   const { error: docErr } = await sb
     .from("documents")
     .insert(documentToRow(document, stored.path) as never);
   if (docErr) return { ok: false, stage: "documents", error: docErr.message };
 
-  // 3. Optional evidence registration → public.evidence
+  // 4. Optional evidence registration → public.evidence (same real hash)
   let evidence: RegisterEvidence | null = null;
   if (input.makeEvidence) {
     const evdId = nextEvdId();
@@ -188,9 +201,9 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
       collected: input.collectedDate?.trim() || displayDate(),
       submitted_by: session?.name ?? "Rahul Mehta",
       custodian: "Investigation Unit",
-      integrity: "pending",
+      integrity: "verified",
       status: "Active",
-      sha256: null,
+      sha256,
       event_id: input.eventId ?? null,
       custody_chain: [
         {
@@ -218,7 +231,7 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
   cacheDocuments = [document, ...cacheDocuments];
   if (evidence) cacheEvidence = [evidence, ...cacheEvidence];
 
-  return { ok: true, document, evidence };
+  return { ok: true, document, evidence, sha256 };
 }
 
 /* ------------------------------- fetch hook -------------------------------- */
@@ -292,4 +305,65 @@ export function useSupabaseRecords(): {
 /** Demo + DB merge helpers used by registers. */
 export function allSeededDocuments(): Document[] {
   return [...cacheDocuments, ...DOCUMENTS];
+}
+
+/* --------------------------- real verification ----------------------------- */
+
+export type VerifyResult =
+  | {
+      ok: true;
+      match: boolean;
+      storedHash: string;
+      calculatedHash: string;
+      integrity: "verified" | "compromised";
+    }
+  | { ok: false; error: string };
+
+/**
+ * Real integrity verification against the stored bytes:
+ *   documents.storage_path → Storage download → SHA-256 → compare → persist.
+ * Returns both hashes so the UI can show exactly what matched or differed.
+ */
+export async function verifyDocumentIntegrity(docId: string): Promise<VerifyResult> {
+  const sb = getSupabase();
+  if (!sb) return { ok: false, error: "Supabase is not connected — nothing to verify against." };
+
+  // 1. Row + storage_path from public.documents
+  const { data: row, error: rowErr } = await sb
+    .from("documents")
+    .select("id, sha256, storage_path, name, case_id")
+    .eq("id", docId)
+    .maybeSingle<{ id: string; sha256: string | null; storage_path: string | null; name: string; case_id: string }>();
+  if (rowErr) return { ok: false, error: rowErr.message };
+  if (!row) return { ok: false, error: `Document ${docId} not found in the database.` };
+  if (!row.storage_path) return { ok: false, error: "This document has no stored file (missing storage_path) — only metadata exists." };
+  if (!row.sha256) return { ok: false, error: "No stored SHA-256 baseline for this document yet." };
+
+  // 2. Download the actual bytes from the private bucket
+  const downloaded = await downloadCaseFile(row.storage_path);
+  if (!downloaded.ok) return { ok: false, error: `Storage download failed: ${downloaded.error}` };
+
+  // 3. Hash the downloaded bytes
+  let calculated: string;
+  try {
+    calculated = await calculateSha256(downloaded.blob);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Hashing failed on the downloaded file." };
+  }
+
+  // 4. Compare + 5. persist the verdict on the row
+  const match = calculated === row.sha256.toLowerCase();
+  const integrity: "verified" | "compromised" = match ? "verified" : "compromised";
+  const { error: updErr } = await sb
+    .from("documents")
+    .update({ integrity })
+    .eq("id", docId);
+  if (updErr) return { ok: false, error: `Verification computed but saving the status failed: ${updErr.message}` };
+
+  // Reflect locally too.
+  cacheDocuments = cacheDocuments.map((d) =>
+    d.id === docId ? { ...d, integrity, hash: row.sha256! } : d,
+  );
+
+  return { ok: true, match, storedHash: row.sha256, calculatedHash: calculated, integrity };
 }

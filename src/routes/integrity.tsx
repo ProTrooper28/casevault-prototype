@@ -24,6 +24,8 @@ import {
 } from "@/components/kit";
 import { DOCUMENTS, shortHash } from "@/lib/mock-data";
 import { allDocuments, docIntegrity, findDocument, logAudit, setIntegrity, useApp } from "@/lib/app-state";
+import { verifyDocumentIntegrity, type VerifyResult } from "@/lib/uploads-repository";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/integrity")({
@@ -38,18 +40,42 @@ function Integrity() {
   const doc = findDocument(selectedId);
   const effective = doc?.integrity ?? "pending";
   const tamperedCount = documents.filter((d) => d.integrity === "compromised").length;
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyResult, setVerifyResult] = useState<Extract<VerifyResult, { ok: true }> | null>(null);
 
-  function verify() {
-    if (!doc) return;
-    setIntegrity(doc.id, "verified");
+  /** Real verification — only meaningful for DB-backed documents with a stored file. */
+  async function verifyReal() {
+    if (!doc || verifying) return;
+    setVerifying(true);
+    setVerifyError(null);
+    setVerifyResult(null);
+
+    const result = await verifyDocumentIntegrity(doc.id);
+    setVerifying(false);
+
+    if (!result.ok) {
+      setVerifyError(result.error);
+      return; // no fake success
+    }
+
+    setVerifyResult(result);
+    setIntegrity(doc.id, result.integrity);
     logAudit({
       user: app.session?.name ?? "Guest Investigator",
       role: "Police Investigator",
-      action: "Integrity re-verified against sealed baseline",
+      action: result.match
+        ? "Real integrity verified — SHA-256 of stored file matches baseline"
+        : "REAL HASH MISMATCH — stored file differs from sealed baseline",
       document: doc.name,
       caseId: doc.caseId,
-      status: "Success",
+      status: result.match ? "Success" : "Blocked",
     });
+    if (result.match) {
+      toast.success("Integrity verified", { description: "SHA-256 of the stored file matches the baseline." });
+    } else {
+      toast.error("HASH MISMATCH DETECTED", { description: "Stored bytes differ from the sealed SHA-256 baseline." });
+    }
   }
 
   function tamper() {
@@ -213,9 +239,29 @@ function Integrity() {
                 </Mono>
               </div>
 
+              {verifyResult && (
+                <div
+                  className={cn(
+                    "mt-3 rounded-md border px-3 py-2.5 text-[12px]",
+                    verifyResult.match ? "border-success/40 bg-success-soft" : "border-alert/50 bg-alert-soft",
+                  )}
+                >
+                  <p className={cn("font-semibold", verifyResult.match ? "text-success" : "text-alert")}>
+                    {verifyResult.match ? "Real verification passed" : "Real verification FAILED"}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">Stored baseline: <Mono className="break-all">{verifyResult.storedHash}</Mono></p>
+                  <p className="mt-0.5 text-muted-foreground">Calculated now: <Mono className="break-all">{verifyResult.calculatedHash}</Mono></p>
+                </div>
+              )}
+              {verifyError && (
+                <p className="mt-3 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+                  {verifyError}
+                </p>
+              )}
+
               <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
-                <Btn onClick={verify}>
-                  <ShieldCheck className="size-3.5" /> Verify now
+                <Btn onClick={verifyReal} disabled={verifying}>
+                  <ShieldCheck className="size-3.5" /> {verifying ? "Verifying…" : "Verify now (real)"}
                 </Btn>
                 <Btn variant="danger" onClick={tamper} disabled={effective === "compromised"}>
                   SIMULATE TAMPERING

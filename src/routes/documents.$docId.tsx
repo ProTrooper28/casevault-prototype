@@ -22,6 +22,7 @@ import {
 import { Timeline } from "@/components/shared";
 import { shortHash } from "@/lib/mock-data";
 import { findDocument, fullAuditTrail } from "@/lib/app-state";
+import { cachedDocuments } from "@/lib/uploads-repository";
 
 export const Route = createFileRoute("/documents/$docId")({
   component: DocumentViewer,
@@ -85,7 +86,7 @@ function DocumentPreview({ docId, name, hash }: { docId: string; name: string; h
 function DocumentViewer() {
   const { docId } = Route.useParams();
   const navigate = useNavigate();
-  const doc = findDocument(docId);
+  const doc = findDocument(docId) ?? cachedDocuments().find((d) => d.id === docId);
 
   if (!doc) {
     return (
