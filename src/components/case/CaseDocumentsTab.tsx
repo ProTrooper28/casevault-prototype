@@ -53,9 +53,10 @@ function SecureTransferModal({
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
+      toast.error("Transfer failed", { description: result.error });
       return;
     }
-    toast.success("Sent securely to Forensic", {
+    toast.success("Document sent to Forensic successfully.", {
       description: `${doc.name} is now Pending in the Forensic Officer's queue.`,
     });
     onClose();

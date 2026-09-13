@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CheckCircle2,
   FileWarning,
@@ -15,8 +15,9 @@ import { Badge, Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import {
   currentActor,
   findDocument,
-  isForensicSession,
   logAudit,
+  signInAsRole,
+  useApp,
 } from "@/lib/app-state";
 import {
   acceptHandoff,
@@ -24,6 +25,7 @@ import {
   replaceCachedHandoff,
   useHandoffs,
 } from "@/lib/handoffs-repository";
+import { allSeededDocuments } from "@/lib/uploads-repository";
 
 export const Route = createFileRoute("/handoffs")({
   component: HandoffsInbox,
@@ -31,8 +33,17 @@ export const Route = createFileRoute("/handoffs")({
 
 function HandoffsInbox() {
   const navigate = useNavigate();
-  const forensic = isForensicSession();
+  const app = useApp();
+  const forensic = app.session?.role === "FORENSIC_OFFICER";
   const { handoffs, loading, error, refresh } = useHandoffs();
+
+  useEffect(() => {
+    refresh();
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refresh]);
+
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -56,7 +67,7 @@ function HandoffsInbox() {
     setBusyId(null);
     if (!result.ok) {
       setActionError(result.error);
-      return; // no fake success — the row stays Pending
+      return;
     }
     replaceCachedHandoff(result.handoff);
     logAudit({
@@ -99,250 +110,253 @@ function HandoffsInbox() {
         }
       />
 
-      {!forensic ? (
-        <div className="rounded-sm border border-border bg-card px-4 py-10 text-center">
-          <p className="text-sm font-medium">Forensic review workspace</p>
-          <p className="mx-auto mt-1 max-w-md text-[13px] text-muted-foreground">
-            This queue belongs to the Forensic Officer demo role. Police officers send handoffs from
-            a case's Documents tab; switch to “Login as Forensic Officer” to review incoming items.
-          </p>
+      <div className="space-y-4">
+        {!forensic ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm border border-primary/30 bg-primary/10 px-4 py-2.5 text-[12.5px] text-foreground">
+            <span>
+              Viewing queue in read-only mode as <strong>{app.session?.name ?? "Police Officer"}</strong>. Switch to <strong>Forensic Officer</strong> to accept or reject incoming handoffs.
+            </span>
+            <Btn size="sm" onClick={() => signInAsRole("FORENSIC_OFFICER")}>
+              Switch to Forensic Officer
+            </Btn>
+          </div>
+        ) : null}
+
+        {/* Status summary strip */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-sm border border-border bg-card px-4 py-2.5 text-[13px]">
+          <span className="label-caps">Incoming Forensic Handoffs</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="label-caps">Pending</span>
+            <span className="font-semibold tabular-nums text-warning">{pending.length}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="label-caps">Accepted</span>
+            <span className="font-semibold tabular-nums text-success">{accepted.length}</span>
+          </span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="label-caps">Rejected</span>
+            <span className="font-semibold tabular-nums text-alert">{rejected.length}</span>
+          </span>
+          <span className="ml-auto flex items-center gap-2 text-[11.5px] text-muted-foreground">
+            <Inbox className="size-3.5" /> Sent by the Investigation Officer
+          </span>
         </div>
-      ) : (
-        <>
-          {/* Status summary strip */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-sm border border-border bg-card px-4 py-2.5 text-[13px]">
-            <span className="label-caps">Incoming Forensic Handoffs</span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="label-caps">Pending</span>
-              <span className="font-semibold tabular-nums text-warning">{pending.length}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="label-caps">Accepted</span>
-              <span className="font-semibold tabular-nums text-success">{accepted.length}</span>
-            </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="label-caps">Rejected</span>
-              <span className="font-semibold tabular-nums text-alert">{rejected.length}</span>
-            </span>
-            <span className="ml-auto flex items-center gap-2 text-[11.5px] text-muted-foreground">
-              <Inbox className="size-3.5" /> Sent by the Investigation Officer
+
+        {error ? (
+          <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
+            <FileWarning className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Could not load handoffs from the database: {error}
             </span>
           </div>
+        ) : null}
+        {actionError ? (
+          <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
+            <FileWarning className="mt-0.5 size-4 shrink-0" />
+            <span>Action not saved: {actionError}</span>
+          </div>
+        ) : null}
 
-          {error ? (
-            <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
-              <FileWarning className="mt-0.5 size-4 shrink-0" />
-              <span>
-                Could not load handoffs from the database: {error} — check the{" "}
-                <code>workflow_handoffs</code> table exists (supabase/schema.sql).
-              </span>
-            </div>
-          ) : null}
-          {actionError ? (
-            <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
-              <FileWarning className="mt-0.5 size-4 shrink-0" />
-              <span>Action not saved: {actionError}</span>
-            </div>
-          ) : null}
-
-          <div className="overflow-x-auto rounded-sm border border-border bg-card">
-            <table className="w-full min-w-[960px] border-collapse">
-              <thead>
+        <div className="overflow-x-auto rounded-sm border border-border bg-card">
+          <table className="w-full min-w-[960px] border-collapse">
+            <thead>
+              <tr>
+                <Th className="px-4">Case / FIR</Th>
+                <Th>Document</Th>
+                <Th>Sent By</Th>
+                <Th>Sent At</Th>
+                <Th>Integrity</Th>
+                <Th>Status</Th>
+                <Th className="text-right">Actions</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && handoffs.length === 0 ? (
                 <tr>
-                  <Th className="px-4">Case / FIR</Th>
-                  <Th>Document</Th>
-                  <Th>Sent By</Th>
-                  <Th>Sent At</Th>
-                  <Th>Integrity</Th>
-                  <Th>Status</Th>
-                  <Th className="text-right">Actions</Th>
+                  <td colSpan={7} className="px-4 py-8 text-center text-[13px] text-muted-foreground">
+                    Loading handoffs from Supabase…
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading && handoffs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-[13px] text-muted-foreground">
-                      Loading handoffs from Supabase…
-                    </td>
-                  </tr>
-                ) : handoffs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center">
-                      <p className="text-[13px] font-medium">No forensic handoffs yet</p>
-                      <p className="mt-1 text-[12px] text-muted-foreground">
-                        When the Investigation Officer sends a document for forensic review, it
-                        appears here as Pending.
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  handoffs.map((h) => {
-                    const doc = h.documentId ? findDocument(h.documentId) : undefined;
-                    return (
-                      <tr key={h.id} className="border-b border-border/60 hover:bg-secondary/40">
-                        <Td className="px-4">
+              ) : handoffs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center">
+                    <p className="text-[13px] font-medium">No forensic handoffs yet</p>
+                    <p className="mt-1 text-[12px] text-muted-foreground">
+                      When the Investigation Officer sends a document for forensic review, it
+                      appears here as Pending.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                handoffs.map((h) => {
+                  const doc = h.documentId
+                    ? findDocument(h.documentId) ?? allSeededDocuments().find((d) => d.id === h.documentId)
+                    : undefined;
+                  return (
+                    <tr key={h.id} className="border-b border-border/60 hover:bg-secondary/40">
+                      <Td className="px-4">
+                        <button
+                          className="font-medium text-primary hover:underline"
+                          onClick={() =>
+                            navigate({ to: "/cases/$caseId", params: { caseId: h.caseId } })
+                          }
+                        >
+                          <Mono className="text-[12.5px] font-semibold">{h.caseId}</Mono>
+                        </button>
+                      </Td>
+                      <Td>
+                        {doc ? (
                           <button
-                            className="font-medium text-primary hover:underline"
+                            className="max-w-[240px] truncate text-left font-medium hover:underline"
                             onClick={() =>
-                              navigate({ to: "/cases/$caseId", params: { caseId: h.caseId } })
+                              navigate({
+                                to: "/documents/$docId",
+                                params: { docId: h.documentId! },
+                              })
                             }
                           >
-                            <Mono className="text-[12.5px] font-semibold">{h.caseId}</Mono>
+                            {doc.name}
                           </button>
-                        </Td>
-                        <Td>
-                          {doc ? (
-                            <button
-                              className="max-w-[240px] truncate text-left font-medium hover:underline"
-                              onClick={() =>
-                                navigate({
-                                  to: "/documents/$docId",
-                                  params: { docId: h.documentId! },
-                                })
-                              }
-                            >
-                              {doc.name}
-                            </button>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {h.documentId ?? "Whole case"}
-                            </span>
-                          )}
-                          {doc ? (
-                            <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                              {doc.type}
-                            </span>
-                          ) : null}
-                          {h.notes ? (
-                            <span className="mt-0.5 block max-w-[260px] truncate text-[11px] text-muted-foreground">
-                              {h.notes}
-                            </span>
-                          ) : null}
-                        </Td>
-                        <Td className="whitespace-nowrap">
-                          <p className="font-medium">{h.fromUser}</p>
-                          <p className="text-[11px] text-muted-foreground">Police Department</p>
-                        </Td>
-                        <Td className="whitespace-nowrap text-[12px] text-muted-foreground">
-                          {new Date(h.createdAt).toLocaleString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })}
-                        </Td>
-                        <Td>
-                          {doc ? (
-                            <IntegrityBadge status={doc.integrity} />
-                          ) : (
-                            <span className="text-[12px] text-muted-foreground">—</span>
-                          )}
-                        </Td>
-                        <Td>
-                          <Badge
-                            tone={
-                              h.status === "Pending"
-                                ? "warning"
-                                : h.status === "Accepted"
-                                  ? "success"
-                                  : "alert"
-                            }
-                          >
-                            {h.status}
-                          </Badge>
-                          {h.status === "Rejected" && h.rejectionReason ? (
-                            <span className="mt-0.5 block max-w-[180px] truncate text-[11px] text-muted-foreground">
-                              {h.rejectionReason}
-                            </span>
-                          ) : null}
-                        </Td>
-                        <Td>
-                          {h.status === "Pending" ? (
-                            rejectingId === h.id ? (
-                              <div className="flex min-w-[260px] flex-col gap-2">
-                                <input
-                                  value={reason}
-                                  onChange={(e) => setReason(e.target.value)}
-                                  placeholder="Rejection reason (required)"
-                                  className="w-full rounded-sm border border-input bg-card px-2.5 py-1.5 text-[13px]"
-                                />
-                                <div className="flex gap-2">
-                                  <Btn
-                                    size="sm"
-                                    variant="danger"
-                                    disabled={!reason.trim() || busyId === h.id}
-                                    onClick={() =>
-                                      decide(h.id, "reject", doc?.name ?? null, h.caseId, reason)
-                                    }
-                                  >
-                                    <XCircle className="size-3.5" />
-                                    {busyId === h.id ? "Saving…" : "Confirm reject"}
-                                  </Btn>
-                                  <Btn
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setRejectingId(null);
-                                      setReason("");
-                                    }}
-                                  >
-                                    Cancel
-                                  </Btn>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex justify-end gap-1.5 pr-3">
+                        ) : (
+                          <span className="font-medium text-muted-foreground">
+                            {h.documentId ?? "Whole case"}
+                          </span>
+                        )}
+                        {doc ? (
+                          <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                            {doc.type}
+                          </span>
+                        ) : null}
+                        {h.notes ? (
+                          <span className="mt-0.5 block max-w-[260px] truncate text-[11px] text-muted-foreground">
+                            {h.notes}
+                          </span>
+                        ) : null}
+                      </Td>
+                      <Td className="whitespace-nowrap">
+                        <p className="font-medium">{h.fromUser}</p>
+                        <p className="text-[11px] text-muted-foreground">Police Department</p>
+                      </Td>
+                      <Td className="whitespace-nowrap text-[12px] text-muted-foreground">
+                        {new Date(h.createdAt).toLocaleString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                      </Td>
+                      <Td>
+                        {doc ? (
+                          <IntegrityBadge status={doc.integrity} />
+                        ) : (
+                          <span className="text-[12px] text-muted-foreground">—</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <Badge
+                          tone={
+                            h.status === "Pending"
+                              ? "warning"
+                              : h.status === "Accepted"
+                                ? "success"
+                                : "alert"
+                          }
+                        >
+                          {h.status}
+                        </Badge>
+                        {h.status === "Rejected" && h.rejectionReason ? (
+                          <span className="mt-0.5 block max-w-[180px] truncate text-[11px] text-muted-foreground">
+                            {h.rejectionReason}
+                          </span>
+                        ) : null}
+                      </Td>
+                      <Td>
+                        {h.status === "Pending" ? (
+                          rejectingId === h.id ? (
+                            <div className="flex min-w-[260px] flex-col gap-2">
+                              <input
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder="Rejection reason (required)"
+                                className="w-full rounded-sm border border-input bg-card px-2.5 py-1.5 text-[13px]"
+                              />
+                              <div className="flex gap-2">
                                 <Btn
                                   size="sm"
-                                  variant="success"
-                                  disabled={busyId === h.id}
-                                  onClick={() => decide(h.id, "accept", doc?.name ?? null, h.caseId)}
+                                  variant="danger"
+                                  disabled={!reason.trim() || busyId === h.id}
+                                  onClick={() =>
+                                    decide(h.id, "reject", doc?.name ?? null, h.caseId, reason)
+                                  }
                                 >
-                                  <CheckCircle2 className="size-3.5" />
-                                  {busyId === h.id ? "Saving…" : "Accept"}
+                                  <XCircle className="size-3.5" />
+                                  {busyId === h.id ? "Saving…" : "Confirm reject"}
                                 </Btn>
                                 <Btn
                                   size="sm"
-                                  variant="outline"
-                                  disabled={busyId === h.id}
-                                  onClick={() => setRejectingId(h.id)}
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setRejectingId(null);
+                                    setReason("");
+                                  }}
                                 >
-                                  <XCircle className="size-3.5" /> Reject
+                                  Cancel
                                 </Btn>
                               </div>
-                            )
-                          ) : (
-                            <div className="flex justify-end pr-3">
-                              <span className="text-[12.5px] text-muted-foreground">
-                                {h.status === "Accepted" && h.acceptedAt
-                                  ? `Accepted ${new Date(h.acceptedAt).toLocaleDateString("en-IN")}`
-                                  : h.status === "Rejected"
-                                    ? `Reason: ${h.rejectionReason ?? "—"}`
-                                    : "—"}
-                              </span>
                             </div>
-                          )}
-                        </Td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          ) : (
+                            <div className="flex justify-end gap-1.5 pr-3">
+                              <Btn
+                                size="sm"
+                                variant="success"
+                                disabled={busyId === h.id}
+                                onClick={() => decide(h.id, "accept", doc?.name ?? null, h.caseId)}
+                              >
+                                <CheckCircle2 className="size-3.5" />
+                                {busyId === h.id ? "Saving…" : "Accept"}
+                              </Btn>
+                              <Btn
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId === h.id}
+                                onClick={() => setRejectingId(h.id)}
+                              >
+                                <XCircle className="size-3.5" /> Reject
+                              </Btn>
+                            </div>
+                          )
+                        ) : (
+                          <div className="flex justify-end pr-3">
+                            <span className="text-[12.5px] text-muted-foreground">
+                              {h.status === "Accepted" && h.acceptedAt
+                                ? `Accepted ${new Date(h.acceptedAt).toLocaleDateString("en-IN")}`
+                                : h.status === "Rejected"
+                                  ? `Reason: ${h.rejectionReason ?? "—"}`
+                                  : "—"}
+                            </span>
+                          </div>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-          {rejected.length + accepted.length > 0 ? (
-            <p className="text-[11.5px] text-muted-foreground">
-              {accepted.length + rejected.length} decided handoff
-              {accepted.length + rejected.length === 1 ? "" : "s"} remain listed with their decision
-              — status is read live from <Mono>public.workflow_handoffs</Mono>.
-              <ShieldCheck className="ml-1 inline size-3 text-success" />
-            </p>
-          ) : null}
-        </>
-      )}
+        {rejected.length + accepted.length > 0 ? (
+          <p className="text-[11.5px] text-muted-foreground">
+            {accepted.length + rejected.length} decided handoff
+            {accepted.length + rejected.length === 1 ? "" : "s"} remain listed with their decision
+            — status is read live from <Mono>public.workflow_handoffs</Mono>.
+            <ShieldCheck className="ml-1 inline size-3 text-success" />
+          </p>
+        ) : null}
+      </div>
     </AppShell>
   );
 }
+
