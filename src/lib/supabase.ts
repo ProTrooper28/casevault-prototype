@@ -90,6 +90,7 @@ export type DocumentRow = {
   sections: string[] | null;
   extracted: { label: string; value: string }[] | null;
   summary: string | null;
+  storage_path?: string | null;
 };
 
 export type EvidenceRow = {

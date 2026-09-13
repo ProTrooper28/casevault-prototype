@@ -51,6 +51,7 @@ create table if not exists public.documents (
   sections    jsonb default '[]'::jsonb,
   extracted   jsonb default '[]'::jsonb,       -- [{label, value}]
   summary     text,
+  storage_path text,                           -- Storage bucket path (case-documents/...), NULL for seeded docs
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -152,6 +153,19 @@ exception
   when duplicate_object then null;
 end
 $trigger$;
+
+-- ------------------------------------------------------------- storage -----
+-- Bucket for real uploaded files. Binaries live ONLY in Storage, never in
+-- Postgres. Run once — safe to re-run (idempotent).
+insert into storage.buckets (id, name, public)
+values ('case-documents', 'case-documents', false)
+on conflict (id) do nothing;
+
+drop policy if exists "anon full access case-documents" on storage.objects;
+create policy "anon full access case-documents" on storage.objects
+  for all to anon
+  using (bucket_id = 'case-documents')
+  with check (bucket_id = 'case-documents');
 
 -- ---------------------------------------------------------------- RLS ------
 -- The prototype ships with permissive anon policies so the seeded demo data

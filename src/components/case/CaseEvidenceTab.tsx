@@ -2,12 +2,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import { registerEvidenceForCase } from "@/lib/evidence-register";
 import { useApp } from "@/lib/app-state";
+import { useSupabaseRecords } from "@/lib/uploads-repository";
 
 export function CaseEvidenceTab({ caseId }: { caseId: string }) {
   const { evidence: runtime } = useApp();
+  const { evidence: dbEvidence } = useSupabaseRecords();
   const navigate = useNavigate();
   const seeded = registerEvidenceForCase(caseId);
   const runtimeItems = runtime.filter((e) => e.caseId === caseId);
+  const dbItems = dbEvidence.filter((e) => e.caseId === caseId);
 
   function open(id: string) {
     navigate({ href: `/evidence/${id}` });
@@ -19,7 +22,7 @@ export function CaseEvidenceTab({ caseId }: { caseId: string }) {
         <div>
           <h2 className="text-sm font-semibold">Evidence Register</h2>
           <p className="text-[11.5px] text-muted-foreground">
-            {seeded.length + runtimeItems.length} items registered for this case
+            {seeded.length + runtimeItems.length + dbItems.length} items registered for this case
           </p>
         </div>
         <span className="text-[11.5px] text-muted-foreground">
@@ -42,6 +45,28 @@ export function CaseEvidenceTab({ caseId }: { caseId: string }) {
             </tr>
           </thead>
           <tbody>
+            {dbItems.map((e) => (
+              <tr
+                key={e.id}
+                className="cursor-pointer hover:bg-secondary/50"
+                onClick={() => open(e.id)}
+              >
+                <Td className="px-4">
+                  <Mono className="text-[12.5px] font-semibold">{e.id}</Mono>
+                </Td>
+                <Td className="font-medium">{e.description}</Td>
+                <Td className="whitespace-nowrap text-muted-foreground">{e.type}</Td>
+                <Td className="whitespace-nowrap text-muted-foreground">{e.collected}</Td>
+                <Td className="whitespace-nowrap">{e.submittedBy}</Td>
+                <Td className="whitespace-nowrap">{e.custodian}</Td>
+                <Td>
+                  <IntegrityBadge status={e.integrity} />
+                </Td>
+                <Td>
+                  <span className="text-[12.5px]">{e.status}</span>
+                </Td>
+              </tr>
+            ))}
             {seeded.map((e) => (
               <tr
                 key={e.id}
@@ -86,7 +111,7 @@ export function CaseEvidenceTab({ caseId }: { caseId: string }) {
                 </Td>
               </tr>
             ))}
-            {seeded.length + runtimeItems.length === 0 ? (
+            {seeded.length + runtimeItems.length + dbItems.length === 0 ? (
               <tr>
                 <Td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                   No evidence registered for this case yet.

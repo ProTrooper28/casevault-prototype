@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Upload, X, CheckCircle2 } from "lucide-react";
+import { Upload, X, CheckCircle2, FileWarning } from "lucide-react";
+import { toast } from "sonner";
 import { Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import { getCase } from "@/lib/mock-data";
 import { allDocuments, findDocument, useApp, uploadDocument } from "@/lib/app-state";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { uploadCaseDocument, useSupabaseRecords } from "@/lib/uploads-repository";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 const DOC_TYPES = [
@@ -18,34 +21,37 @@ const DOC_TYPES = [
   "Legal Notice",
 ] as const;
 
-const STAGES = [
-  "Uploading…",
-  "Processing…",
-  "Metadata extracted",
-  "Integrity fingerprint generated",
-  "Document added to case",
-] as const;
-
 function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void }) {
-  const [fileName, setFileName] = useState("");
   const [docType, setDocType] = useState<(typeof DOC_TYPES)[number]>("FIR");
   const [notes, setNotes] = useState("");
-  const [stage, setStage] = useState(-1); // -1 = form, 0..4 = progress, 5 = done
+  const [stage, setStage] = useState(-1); // -1 = form, 0 = uploading, 4 = done
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  function start() {
-    if (!fileName.trim()) return;
-    setStage(0);
-    // Deterministic staged progress — no timers, no randomness.
-    const timers = [
-      window.setTimeout(() => setStage(1), 500),
-      window.setTimeout(() => setStage(2), 1000),
-      window.setTimeout(() => setStage(3), 1500),
-      window.setTimeout(() => {
-        uploadDocument({ caseId, fileName: fileName.trim(), docType, notes });
-        setStage(4);
-      }, 2000),
-    ];
-    void timers;
+  async function start() {
+    if (!file) return;
+    setError(null);
+    setStage(0); // real upload in progress — no fake timers
+
+    const result = await uploadCaseDocument({ caseId, file, docType, notes });
+
+    if (!result.ok) {
+      setStage(-1);
+      setError(
+        result.stage === "storage"
+          ? `File upload failed: ${result.error}`
+          : result.stage === "documents"
+            ? `File uploaded to storage, but saving the document record failed: ${result.error}`
+            : `Document saved, but evidence registration failed: ${result.error}`,
+      );
+      return;
+    }
+
+    setStage(4);
+    toast.success(`${result.document.name} added to case`, {
+      description: "File stored in the secure vault; record saved to the database.",
+    });
   }
 
   const done = stage === 4;
@@ -64,15 +70,24 @@ function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void 
         {stage === -1 ? (
           <div className="space-y-3.5 px-4 py-4">
             <div className="space-y-1.5">
-              <Label htmlFor="up-file">File name</Label>
-              <Input
+              <Label htmlFor="up-file">Document file</Label>
+              <input
+                ref={inputRef}
                 id="up-file"
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                placeholder="e.g. Seizure-Memo-02.pdf"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.mp4,.mp3,.txt"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="block w-full border border-input bg-card px-2.5 py-1.5 text-[13px] file:mr-3 file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-[12px] file:font-medium"
               />
+              {file && (
+                <p className="text-[11px] text-muted-foreground">
+                  {file.name} · {Math.max(1, Math.round(file.size / 1024))} KB
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground">
-                File storage is simulated — type a file name to run the intake pipeline.
+                {isSupabaseConfigured
+                  ? "The file is stored in the secure vault (case-documents) and linked to this case."
+                  : "Connect Supabase keys in Settings to store files permanently."}
               </p>
             </div>
             <div className="space-y-1.5">
@@ -99,11 +114,16 @@ function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void 
                 placeholder="Context for the case file"
               />
             </div>
+            {error && (
+              <p className="flex items-start gap-2 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+                <FileWarning className="mt-0.5 size-3.5 shrink-0" /> {error}
+              </p>
+            )}
             <div className="flex justify-end gap-2 border-t border-border pt-3">
               <Btn variant="outline" onClick={onClose}>
                 Cancel
               </Btn>
-              <Btn onClick={start} disabled={!fileName.trim()}>
+              <Btn onClick={start} disabled={!file}>
                 <Upload className="size-3.5" /> Upload
               </Btn>
             </div>
@@ -111,32 +131,33 @@ function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void 
         ) : (
           <div className="px-4 py-4">
             <ul className="space-y-2.5">
-              {STAGES.map((s, i) => {
-                const state = i < stage ? "done" : i === stage ? "active" : "pending";
+              {[
+                stage === 0 && !done ? "Uploading file to secure vault…" : "File stored in secure vault",
+                done ? "Document record saved to database" : "Saving document record…",
+                done ? "Document added to case" : "Finalizing…",
+              ].map((s, i) => {
+                const state = done || i === 0 ? "done" : "active";
                 return (
-                  <li key={s} className="flex items-center gap-2.5 text-[13px]">
+                  <li key={`${s}-${i}`} className="flex items-center gap-2.5 text-[13px]">
                     <span
                       className={cn(
                         "flex size-4 items-center justify-center rounded-full border",
                         state === "done" && "border-success bg-success text-white",
                         state === "active" && "border-primary",
-                        state === "pending" && "border-border-strong",
                       )}
                     >
                       {state === "done" ? <CheckCircle2 className="size-3" /> : null}
                     </span>
-                    <span
-                      className={cn(
-                        state === "pending" && "text-muted-foreground",
-                        state === "active" && "font-medium",
-                      )}
-                    >
-                      {s}
-                    </span>
+                    <span className={state === "active" ? "font-medium" : ""}>{s}</span>
                   </li>
                 );
               })}
             </ul>
+            {error && (
+              <p className="mt-3 flex items-start gap-2 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+                <FileWarning className="mt-0.5 size-3.5 shrink-0" /> {error}
+              </p>
+            )}
             <div className="mt-4 flex justify-end border-t border-border pt-3">
               <Btn variant={done ? "primary" : "outline"} onClick={onClose}>
                 {done ? "Close" : "Cancel"}
@@ -153,8 +174,9 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const app = useApp();
   const [uploadOpen, setUploadOpen] = useState(false);
   const navigate = useNavigate();
+  const { documents: dbDocs } = useSupabaseRecords();
   const c = getCase(caseId);
-  const docs = allDocuments(app).filter((d) => d.caseId === caseId);
+  const docs = [...dbDocs, ...allDocuments(app)].filter((d) => d.caseId === caseId);
 
   return (
     <div className="border border-border bg-card">
@@ -232,9 +254,7 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
             ) : null}
           </tbody>
         </table>
-      </div>
-
-      {uploadOpen ? <UploadModal caseId={caseId} onClose={() => setUploadOpen(false)} /> : null}
+      </div>      {uploadOpen ? <UploadModal caseId={caseId} onClose={() => setUploadOpen(false)} /> : null}
     </div>
   );
 }

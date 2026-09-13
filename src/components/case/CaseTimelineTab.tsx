@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Paperclip, ShieldCheck, Clock, ShieldAlert, Plus, X, Eye } from "lucide-react";
+import { toast } from "sonner";
+import { FileWarning, Paperclip, ShieldCheck, Clock, ShieldAlert, Plus, X, Eye } from "lucide-react";
 import { Badge, Btn, IntegrityBadge, Mono } from "@/components/kit";
 import { caseTimeline, type TimelineEvent } from "@/lib/case-timeline";
 import { addEvidence, attachEvidenceToEvent, eventWithAttachments, useApp } from "@/lib/app-state";
+import { uploadCaseDocument } from "@/lib/uploads-repository";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -24,9 +27,55 @@ function AddEvidenceModal({
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
   const [collectedDate, setCollectedDate] = useState(event.date);
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function submit() {
-    if (!name.trim()) return;
+  async function submit() {
+    if (!name.trim() || busy) return;
+    setError(null);
+
+    // With a file + Supabase connected: real upload → documents + evidence rows.
+    if (file && isSupabaseConfigured) {
+      setBusy(true);
+      const result = await uploadCaseDocument({
+        caseId,
+        file,
+        docType: "Evidence Record",
+        notes: description.trim() || undefined,
+        makeEvidence: true,
+        eventId: event.id,
+        evidenceDescription: name.trim(),
+        collectedDate: collectedDate.trim() || event.date,
+      });
+      setBusy(false);
+
+      if (!result.ok) {
+        setError(
+          result.stage === "storage"
+            ? `File upload failed: ${result.error}`
+            : result.stage === "documents"
+              ? `File stored, but document record failed: ${result.error}`
+              : `Document saved, but evidence record failed: ${result.error}`,
+        );
+        return; // stay open — no fake success
+      }
+
+      const item = result.evidence!;
+      attachEvidenceToEvent(event.id, {
+        id: item.id,
+        label: item.description,
+        kind: "evidence",
+        href: `/evidence/${item.id}`,
+      });
+      toast.success(`Evidence ${item.id} registered`, {
+        description: "File stored in the secure vault; records saved to the database.",
+      });
+      onClose();
+      return;
+    }
+
+    // Demo mode (no file or no keys): keep the existing local-state behavior.
     const item = addEvidence({
       caseId,
       eventId: event.id,
@@ -121,21 +170,40 @@ function AddEvidenceModal({
             </div>
           </div>
 
-          <div className="border border-dashed border-border-strong px-4 py-5 text-center">
-            <Paperclip className="mx-auto size-4 text-muted-foreground" />
-            <p className="mt-1 text-[12.5px] text-muted-foreground">
-              Upload File — file storage is simulated in this prototype; the register entry and
-              fingerprint are generated locally.
+          <div className="space-y-1.5">
+            <Label htmlFor="ev-file">Upload File</Label>
+            <input
+              id="ev-file"
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.mp4,.mp3,.txt"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full border border-input bg-card px-2.5 py-1.5 text-[13px] file:mr-3 file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-[12px] file:font-medium"
+            />
+            {file && (
+              <p className="text-[11px] text-muted-foreground">
+                {file.name} · {Math.max(1, Math.round(file.size / 1024))} KB
+              </p>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              {isSupabaseConfigured
+                ? "With a file selected, it is stored in the secure vault and registered as evidence for this event."
+                : "Connect Supabase keys in Settings to store files; otherwise the entry is session-only."}
             </p>
           </div>
+
+          {error && (
+            <p className="flex items-start gap-2 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+              <FileWarning className="mt-0.5 size-3.5 shrink-0" /> {error}
+            </p>
+          )}
         </div>
 
         <footer className="flex justify-end gap-2 border-t border-border px-4 py-3">
-          <Btn variant="outline" onClick={onClose}>
+          <Btn variant="outline" onClick={onClose} disabled={busy}>
             Cancel
           </Btn>
-          <Btn onClick={submit} disabled={!name.trim()}>
-            <Plus className="size-3.5" /> Add Evidence
+          <Btn onClick={submit} disabled={!name.trim() || busy}>
+            <Plus className="size-3.5" /> {busy ? "Uploading…" : "Add Evidence"}
           </Btn>
         </footer>
       </div>

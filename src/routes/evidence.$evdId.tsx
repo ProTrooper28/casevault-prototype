@@ -3,6 +3,7 @@ import { ArrowLeft, ShieldCheck, Clock, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Badge, Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import { EVIDENCE_REGISTER, findRegisterEvidence } from "@/lib/evidence-register";
+import { cachedEvidence } from "@/lib/uploads-repository";
 import { useApp } from "@/lib/app-state";
 import { CASES } from "@/lib/mock-data";
 
@@ -29,7 +30,7 @@ function EvidenceDetail() {
   const navigate = useNavigate();
   const { evidence: runtime } = useApp();
 
-  const seeded = findRegisterEvidence(evdId);
+  const seeded = findRegisterEvidence(evdId) ?? cachedEvidence().find((e) => e.id === evdId);
   const runtimeItem = runtime.find((e) => e.id === evdId);
 
   const item: UnifiedEvidence | undefined = seeded
