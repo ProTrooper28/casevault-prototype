@@ -47,15 +47,17 @@ export function ProcessWithAi({ doc }: { doc: Document }) {
   const timerRef = useRef<number | null>(null);
 
   // Only DB-backed uploads with real stored bytes can be processed.
-  const isUpload = /^DOC-R/.test(doc.id);
-  const hasRealHash = /^[a-f0-9]{64}$/.test(doc.hash);
-  if (!isUpload || !hasRealHash) return null;
+  // NOTE: computed before hooks, but the early return happens AFTER all hooks
+  // run — conditional hook execution crashes React on demo documents.
+  const canProcess = /^DOC-R/.test(doc.id) && /^[a-f0-9]{64}$/.test(doc.hash);
 
   useEffect(() => {
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
   }, []);
+
+  if (!canProcess) return null;
 
   const startStageCycler = () => {
     setStage(0);

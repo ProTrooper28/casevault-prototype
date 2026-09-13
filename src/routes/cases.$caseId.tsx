@@ -9,10 +9,15 @@ import { CaseEvidenceTab } from "@/components/case/CaseEvidenceTab";
 import { CasePeopleTab } from "@/components/case/CasePeopleTab";
 import { CaseAccessTab } from "@/components/case/CaseAccessTab";
 import { CASES } from "@/lib/mock-data";
-import { allCases } from "@/lib/cases-repository";
+import { allCases, getCaseById } from "@/lib/cases-repository";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/$caseId")({
+  loader: async ({ params }) => {
+    // Resolve the case server-side on deep links/refreshes — the sync cache is
+    // empty on cold SSR, so Supabase-created cases would 404 otherwise.
+    await getCaseById(params.caseId);
+  },
   component: CaseWorkspace,
 });
 

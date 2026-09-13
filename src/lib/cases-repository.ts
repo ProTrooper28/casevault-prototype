@@ -137,6 +137,32 @@ export function allCases(): Case[] {
   return [...(cache ?? []), ...CASES];
 }
 
+/** Look up a case in the cache, else demo data. Sync, never fetches. */
+function findCached(id: string): Case | undefined {
+  return allCases().find((c) => c.id === id);
+}
+
+/**
+ * Async case loader that works on cold SSR/deep-link: if the cache misses,
+ * fetches the single row from Supabase before falling back to demo data.
+ */
+export async function getCaseById(id: string): Promise<Case | undefined> {
+  const hit = findCached(id);
+  if (hit) return hit;
+  const sb = getSupabase();
+  if (!sb) return undefined;
+  const { data, error } = await sb
+    .from("cases")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle<CaseRow>();
+  if (error || !data) return undefined;
+  const mapped = rowToCase(data);
+  // Keep the one-shot cache warm for subsequent renders of the same request.
+  cache = [mapped, ...(cache ?? [])];
+  return mapped;
+}
+
 /** Hook: Supabase cases (when configured) merged ahead of the demo dataset. */
 export function useCases(): {
   cases: Case[];
