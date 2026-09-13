@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge, Btn, BtnLink, IntegrityBadge, Mono, PageIntro, DemoNotice } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { CASES } from "@/lib/mock-data";
+import { allCases } from "@/lib/cases-repository";
 import { allDocuments, useApp } from "@/lib/app-state";
 import { EVIDENCE_REGISTER } from "@/lib/evidence-register";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,7 @@ function SmartSearch() {
     if (!q) return [];
     const hits: Hit[] = [];
 
-    for (const c of CASES) {
+    for (const c of allCases()) {
       const hay = [c.id, c.title, c.type, c.location, c.investigator, c.summary, ...c.sections, ...c.people.map((p) => p.name)]
         .join(" ")
         .toLowerCase();

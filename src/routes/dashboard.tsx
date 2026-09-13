@@ -17,6 +17,7 @@ import { Badge, BtnLink, CaseStatusBadge, Mono, Td, Th } from "@/components/kit"
 import { Timeline } from "@/components/shared";
 import { CASES, DOCUMENTS } from "@/lib/mock-data";
 import { allDocuments, useApp } from "@/lib/app-state";
+import { useCases } from "@/lib/cases-repository";
 import { EVIDENCE_REGISTER } from "@/lib/evidence-register";
 import { cn } from "@/lib/utils";
 
@@ -29,12 +30,13 @@ function Dashboard() {
   const app = useApp();
   const documents = allDocuments(app);
   const runtimeEvidence = app.evidence;
+  const { cases: dbCases, loading: dbLoading } = useCases();
 
   const metrics = {
-    total: CASES.length,
-    active: CASES.filter((c) => c.status === "Active").length,
-    review: CASES.filter((c) => c.status === "Under Review").length,
-    closed: CASES.filter((c) => c.status === "Closed").length,
+    total: dbCases.length,
+    active: dbCases.filter((c) => c.status === "Active").length,
+    review: dbCases.filter((c) => c.status === "Under Review").length,
+    closed: dbCases.filter((c) => c.status === "Closed").length,
     documents: documents.length,
     evidence: EVIDENCE_REGISTER.length + runtimeEvidence.length,
   };
@@ -140,7 +142,7 @@ function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {CASES.map((c) => {
+              {dbCases.map((c) => {
                 const docs =
                   DOCUMENTS.filter((d) => d.caseId === c.id).length +
                   app.documents.filter((d) => d.caseId === c.id).length;

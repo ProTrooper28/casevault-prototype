@@ -48,7 +48,7 @@ export type AddedEvidence = {
   }[];
 };
 
-type AppState = {
+export type AppState = {
   session: Session;
   /** docId -> integrity status once a user verifies / tampers / restores */
   integrity: Record<string, IntegrityStatus>;
@@ -283,6 +283,11 @@ export function eventAttachmentsFor(eventId: string): TimelineAttachment[] {
 
 export function useApp() {
   return useSyncExternalStore(subscribe, () => state, () => state);
+}
+
+/** Non-reactive snapshot of the current store — for one-shot reads (sync jobs). */
+export function getAppState(): AppState {
+  return state;
 }
 
 /* ------------------------------ derived data ------------------------------ */

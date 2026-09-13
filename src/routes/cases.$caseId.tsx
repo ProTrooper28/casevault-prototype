@@ -9,6 +9,7 @@ import { CaseEvidenceTab } from "@/components/case/CaseEvidenceTab";
 import { CasePeopleTab } from "@/components/case/CasePeopleTab";
 import { CaseAccessTab } from "@/components/case/CaseAccessTab";
 import { CASES } from "@/lib/mock-data";
+import { allCases } from "@/lib/cases-repository";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/$caseId")({
@@ -21,7 +22,7 @@ type Tab = (typeof TABS)[number];
 function CaseWorkspace() {
   const { caseId } = Route.useParams();
   const [tab, setTab] = useState<Tab>("Overview");
-  const c = CASES.find((x) => x.id === caseId);
+  const c = allCases().find((x) => x.id === caseId);
 
   if (!c) {
     return (

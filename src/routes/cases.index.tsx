@@ -1,12 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { CaseStatusBadge, Mono, Td, Th } from "@/components/kit";
+import { Btn, CaseStatusBadge, Mono, Td, Th } from "@/components/kit";
 import { Input } from "@/components/ui/input";
-import { CASES, DOCUMENTS } from "@/lib/mock-data";
+import { CASES, DOCUMENTS, type Case } from "@/lib/mock-data";
 import { useApp } from "@/lib/app-state";
 import { EVIDENCE_REGISTER } from "@/lib/evidence-register";
+import { useCases } from "@/lib/cases-repository";
+import { CreateFirModal } from "@/components/CreateFirModal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/")({
@@ -35,10 +38,12 @@ function Cases() {
   const [query, setQuery] = useState(searchParams.q ?? "");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [sort, setSort] = useState<Sort>("Last Updated");
+  const { cases: dbCases, loading: dbLoading, error: dbError, refresh: refreshCases } = useCases();
+  const [showCreateFir, setShowCreateFir] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const rows = CASES.filter((c) => {
+    const rows = dbCases.filter((c) => {
       const matchesQuery =
         !q ||
         [c.id, c.title, c.type, c.location, c.investigator, ...c.sections]
@@ -55,16 +60,20 @@ function Cases() {
         return parse(b.openedOn) - parse(a.openedOn);
       }
       if (sort === "Priority") return priorityRank[a.priority] - priorityRank[b.priority];
-      // Last Updated: keep spec order (FIR case first)
-      return CASES.indexOf(a) - CASES.indexOf(b);
+      // Last Updated: keep spec order (demo FIR case first, newest DB rows on top)
+      const rank = (c: Case) => {
+        const demoIdx = CASES.findIndex((d) => d.id === c.id);
+        return demoIdx >= 0 ? 1000 + demoIdx : -c.id.length; // DB rows (newest first) precede demo rows
+      };
+      return rank(a) - rank(b);
     });
-  }, [query, filter, sort]);
+  }, [query, filter, sort, dbCases]);
 
   const counts = {
-    total: CASES.length,
-    active: CASES.filter((c) => c.status === "Active").length,
-    review: CASES.filter((c) => c.status === "Under Review").length,
-    closed: CASES.filter((c) => c.status === "Closed").length,
+    total: dbCases.length,
+    active: dbCases.filter((c) => c.status === "Active").length,
+    review: dbCases.filter((c) => c.status === "Under Review").length,
+    closed: dbCases.filter((c) => c.status === "Closed").length,
   };
 
   const officer = session?.name ?? "Rahul Mehta";
@@ -90,8 +99,18 @@ function Cases() {
           <span className="label-caps">Closed</span>
           <span className="font-semibold tabular-nums">{counts.closed}</span>
         </span>
-        <span className="ml-auto hidden text-[11.5px] text-muted-foreground sm:block">
-          Click a case to open its workspace
+        <span className="ml-auto flex items-center gap-3">
+          {dbError && (
+            <span className="text-[11.5px] text-destructive" title={dbError}>
+              Database sync issue
+            </span>
+          )}
+          <span className="hidden text-[11.5px] text-muted-foreground sm:block">
+            Click a case to open its workspace
+          </span>
+          <Btn size="sm" onClick={() => setShowCreateFir(true)}>
+            <Plus className="size-3.5" /> Create FIR
+          </Btn>
         </span>
       </div>
 
@@ -212,8 +231,22 @@ function Cases() {
       </div>
 
       <p className="text-[12px] text-muted-foreground">
-        {filtered.length} of {CASES.length} cases shown · demo workspace with fabricated records
+        {filtered.length} of {dbCases.length} cases shown · demo workspace with fabricated records
+        {dbLoading ? " · syncing database…" : ""}
       </p>
+
+      {showCreateFir && (
+        <CreateFirModal
+          onClose={() => setShowCreateFir(false)}
+          onCreated={(created) => {
+            refreshCases();
+            toast.message(`Opening ${created.id}`, {
+              description: "Case file is ready in your workspace.",
+            });
+            navigate({ to: "/cases/$caseId", params: { caseId: created.id } });
+          }}
+        />
+      )}
     </AppShell>
   );
 }
