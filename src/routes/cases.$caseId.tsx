@@ -15,6 +15,7 @@ import { allCases, getCaseById, isSupabaseCase } from "@/lib/cases-repository";
 import { recordAuditEvent } from "@/lib/audit-repository";
 import { isPoliceSession } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
+import { FirAiAnalysisDashboard } from "@/components/case/FirAiAnalysisDashboard";
 
 export const Route = createFileRoute("/cases/$caseId")({
   loader: async ({ params }) => {
@@ -160,6 +161,17 @@ function CaseWorkspace() {
 /** AI Analysis — surfaces the per-document AI results already stored on records. */
 function CaseAnalysisPanel({ caseId }: { caseId: string }) {
   const c = allCases().find((x) => x.id === caseId);
+  const isFir =
+    caseId === "FIR-2026-00124" ||
+    caseId.startsWith("FIR-") ||
+    c?.type.toLowerCase().includes("fir") ||
+    c?.title.toLowerCase().includes("fir") ||
+    c?.title.toLowerCase().includes("theft");
+
+  if (isFir) {
+    return <FirAiAnalysisDashboard caseId={caseId} docId="DOC-10241" />;
+  }
+
   const hasParties = (c?.people.length ?? 0) > 0;
   return (
     <div className="rounded-sm border border-border bg-card">

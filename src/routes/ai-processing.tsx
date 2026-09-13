@@ -13,6 +13,7 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { Badge, Btn, BtnLink, DemoNotice, Mono, Panel, PageIntro } from "@/components/kit";
 import { DOCUMENTS, PROCESSING_STAGES, getCase } from "@/lib/mock-data";
+import { FirAiAnalysisDashboard } from "@/components/case/FirAiAnalysisDashboard";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ai-processing")({
@@ -161,6 +162,11 @@ function AiProcessing() {
           );
         })}
       </div>
+
+      {/* Grounded FIR Intelligence Analysis Dashboard */}
+      {docId === "DOC-10241" || doc?.type === "FIR" || doc?.name.toLowerCase().includes("fir") ? (
+        <FirAiAnalysisDashboard caseId={doc?.caseId ?? "FIR-2026-00124"} docId={docId} overrideDocName={doc?.name} overrideHash={doc?.hash} />
+      ) : null}
 
       <Panel title="Pipeline output → vault linkage" bodyClassName="p-0">
         <div className="divide-y divide-border">

@@ -24,6 +24,7 @@ import { Timeline } from "@/components/shared";
 import { ProcessWithAi } from "@/components/ProcessWithAi";
 import { shortHash } from "@/lib/mock-data";
 import { findDocument, fullAuditTrail } from "@/lib/app-state";
+import { FirAiAnalysisDashboard } from "@/components/case/FirAiAnalysisDashboard";
 import { cachedDocuments } from "@/lib/uploads-repository";
 import { recordAuditEvent } from "@/lib/audit-repository";
 
@@ -226,6 +227,16 @@ function DocumentViewer() {
           </Panel>
         </div>
       </div>
+
+      {/* FIR AI Intelligence Panel */}
+      {doc.id === "DOC-10241" || doc.type === "FIR" || doc.name.toLowerCase().includes("fir") ? (
+        <FirAiAnalysisDashboard
+          caseId={doc.caseId}
+          docId={doc.id}
+          overrideDocName={doc.name}
+          overrideHash={doc.hash}
+        />
+      ) : null}
 
       {/* Real AI processing (only for uploaded documents with stored bytes) */}
       <ProcessWithAi doc={doc} />
