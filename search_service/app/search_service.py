@@ -95,3 +95,14 @@ def search_global(
     ).execute()
 
     return result.data or []
+
+def get_case_timeline(case_id: str, requesting_officer_id: str) -> List[dict]:
+    result = supabase.rpc(
+        "get_case_timeline",
+        {
+            "match_case_id": case_id,
+            "requesting_officer_id": requesting_officer_id,
+        },
+    ).execute()
+
+    return result.data or []

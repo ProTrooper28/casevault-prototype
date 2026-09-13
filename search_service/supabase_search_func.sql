@@ -89,3 +89,76 @@ as $$
     order by de.embedding <=> query_embedding
     limit match_count;
 $$;
+
+create or replace function get_case_timeline(
+    match_case_id          uuid,
+    requesting_officer_id  uuid
+)
+returns table (
+    event_timestamp timestamptz,
+    event_type      text,
+    title           text,
+    description     text,
+    source_id       uuid
+)
+language sql stable
+as $$
+    with case_auth as (
+        select 1
+        from cases c
+        where c.id = match_case_id
+          and (
+                c.created_by = requesting_officer_id
+                or c.lead_investigator_id = requesting_officer_id
+                or exists (
+                    select 1 from case_access ca
+                    where ca.case_id = c.id and ca.profile_id = requesting_officer_id
+                )
+              )
+    )
+    select event_timestamp, event_type, title, description, source_id
+    from (
+        select
+            c.fir_date::timestamptz as event_timestamp,
+            'fir_registered' as event_type,
+            'FIR Registered' as title,
+            coalesce('FIR ' || c.fir_number || ' — ' || c.fir_police_station, 'FIR registered') as description,
+            c.id as source_id
+        from cases c, case_auth
+        where c.id = match_case_id and c.fir_date is not null
+
+        union all
+
+        select
+            c.court_case_filed_date::timestamptz,
+            'court_filed',
+            'Case Filed in Court',
+            coalesce(c.court_name || ' — ' || c.court_case_number, 'Court proceedings began'),
+            c.id
+        from cases c, case_auth
+        where c.id = match_case_id and c.court_case_filed_date is not null
+
+        union all
+
+        select
+            d.created_at,
+            'document_uploaded',
+            'Document Uploaded: ' || d.title,
+            d.document_type,
+            d.id
+        from documents d, case_auth
+        where d.case_id = match_case_id
+
+        union all
+
+        select
+            h.handover_timestamp,
+            'custody_transfer',
+            'Evidence Transferred',
+            coalesce(h.purpose, 'Custody transfer'),
+            h.id
+        from handoffs h, case_auth
+        where h.case_id = match_case_id
+    ) events
+    order by event_timestamp asc;
+$$;

@@ -12,6 +12,9 @@ from app.schemas import (
     GlobalSearchRequest,
     GlobalSearchResponse,
     GlobalSearchResultItem,
+    TimelineRequest,
+    TimelineEvent,
+    TimelineResponse,
 )
 from app import search_service
 
@@ -105,3 +108,15 @@ def search_global(req: GlobalSearchRequest):
     ]
 
     return GlobalSearchResponse(query=req.query, results=result_items)
+
+@app.post("/timeline", response_model=TimelineResponse)
+def get_timeline(req: TimelineRequest):
+    events = search_service.get_case_timeline(
+        case_id=req.case_id,
+        requesting_officer_id=req.requesting_officer_id,
+    )
+
+    return TimelineResponse(
+        case_id=req.case_id,
+        events=[TimelineEvent(**e) for e in events],
+    )

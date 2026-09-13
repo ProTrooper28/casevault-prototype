@@ -50,3 +50,20 @@ class GlobalSearchResponse(BaseModel):
     query: str
     results: List[GlobalSearchResultItem]
     message: Optional[str] = None
+
+class TimelineRequest(BaseModel):
+    case_id: str
+    requesting_officer_id: str
+
+
+class TimelineEvent(BaseModel):
+    event_timestamp: str
+    event_type: str
+    title: str
+    description: Optional[str] = None
+    source_id: Optional[str] = None
+
+
+class TimelineResponse(BaseModel):
+    case_id: str
+    events: List[TimelineEvent]
