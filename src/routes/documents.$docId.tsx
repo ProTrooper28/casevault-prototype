@@ -20,6 +20,7 @@ import {
   Panel,
 } from "@/components/kit";
 import { Timeline } from "@/components/shared";
+import { ProcessWithAi } from "@/components/ProcessWithAi";
 import { shortHash } from "@/lib/mock-data";
 import { findDocument, fullAuditTrail } from "@/lib/app-state";
 import { cachedDocuments } from "@/lib/uploads-repository";
@@ -210,6 +211,9 @@ function DocumentViewer() {
           </Panel>
         </div>
       </div>
+
+      {/* Real AI processing (only for uploaded documents with stored bytes) */}
+      <ProcessWithAi doc={doc} />
 
       {/* Integrity + history */}
       <div className="grid gap-4 xl:grid-cols-2">

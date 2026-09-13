@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { FileWarning, Paperclip, X } from "lucide-react";
 import { Btn, Mono } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import {
   generateFirNumber,
   type CaseCreatedCallback,
 } from "@/lib/cases-repository";
+import { uploadCaseDocument } from "@/lib/uploads-repository";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 /* -------------------------------------------------------------------------- */
@@ -50,17 +51,21 @@ export function CreateFirModal({
   const [sections, setSections] = useState("");
   const [summary, setSummary] = useState("");
   const [priority, setPriority] = useState<(typeof PRIORITIES)[number]>("Medium");
-  const [submitting, setSubmitting] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [phase, setPhase] = useState<"idle" | "creating" | "uploading">("idle");
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const submitting = phase !== "idle";
 
   async function submit() {
     if (!title.trim() || !firNo.trim()) {
       setError("FIR number and title are required.");
       return;
     }
-    setSubmitting(true);
     setError(null);
 
+    // 1. Create the FIR via the existing flow.
+    setPhase("creating");
     const result = await createFirCase({
       id: firNo.trim(),
       title: title.trim(),
@@ -80,17 +85,55 @@ export function CreateFirModal({
 
     if (!result.ok) {
       // Do NOT pretend it saved — surface the real error and keep the form.
-      setSubmitting(false);
+      setPhase("idle");
       setError(result.error);
       return;
     }
 
-    toast.success(`FIR ${result.case.id} registered`, {
-      description:
-        result.source === "supabase"
-          ? "Saved to the secure case database."
-          : "Saved for this session (demo mode).",
-    });
+    // 2. Optional attachment → reuse the existing real upload pipeline
+    //    (Storage upload → SHA-256 → documents insert) under the new case ID.
+    if (file && result.source === "supabase") {
+      setPhase("uploading");
+      const upload = await uploadCaseDocument({
+        caseId: result.case.id,
+        file,
+        docType: "FIR",
+        notes: summary.trim() || undefined,
+      });
+
+      if (!upload.ok) {
+        // FIR stays intact; say exactly what failed — never fake success.
+        setPhase("idle");
+        toast.warning(`FIR ${result.case.id} created, but document upload failed`, {
+          description: upload.error,
+        });
+        setError(
+          `The FIR was created successfully, but the document could not be secured (${upload.error}). The FIR has been kept open — you can upload the document later from the case's Documents tab.`,
+        );
+        onCreated(result.case);
+        return;
+      }
+
+      toast.success(`FIR created and document secured successfully.`, {
+        description: `${result.case.id} registered; ${upload.document.name} stored with verified SHA-256.`,
+      });
+      onCreated(result.case);
+      onClose();
+      return;
+    }
+
+    if (file && result.source !== "supabase") {
+      toast.warning("FIR created for this session", {
+        description: "Connect Supabase keys to also store the attached document permanently.",
+      });
+    } else {
+      toast.success(`FIR ${result.case.id} registered`, {
+        description:
+          result.source === "supabase"
+            ? "Saved to the secure case database."
+            : "Saved for this session (demo mode).",
+      });
+    }
     onCreated(result.case);
     onClose();
   }
@@ -238,9 +281,58 @@ export function CreateFirModal({
             />
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor="fir-file">Attach FIR / Case Document (optional)</Label>
+            {file ? (
+              <div className="flex items-center justify-between gap-3 border border-border bg-muted/40 px-3 py-2">
+                <span className="flex min-w-0 items-center gap-2 text-[12.5px]">
+                  <Paperclip className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate font-medium">{file.name}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {Math.max(1, Math.round(file.size / 1024))} KB
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    disabled={submitting}
+                    className="border border-border px-2 py-0.5 text-[12px] font-medium hover:bg-secondary disabled:opacity-50"
+                  >
+                    Replace
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFile(null)}
+                    disabled={submitting}
+                    aria-label="Remove attachment"
+                    className="px-2 py-0.5 text-[12px] font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <input
+                ref={inputRef}
+                id="fir-file"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.mp4,.mp3,.txt"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                disabled={submitting}
+                className="block w-full rounded-md border border-input bg-card px-2.5 py-1.5 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-[12px] file:font-medium"
+              />
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              {isSupabaseConfigured
+                ? "The file is stored in the secure vault with a verified SHA-256 fingerprint."
+                : "Connect Supabase keys to store the attachment permanently."}
+            </p>
+          </div>
+
           {error && (
-            <p className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
-              {error}
+            <p className="flex items-start gap-2 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+              <FileWarning className="mt-0.5 size-3.5 shrink-0" /> {error}
             </p>
           )}
         </div>
@@ -250,7 +342,7 @@ export function CreateFirModal({
             Cancel
           </Btn>
           <Btn size="sm" onClick={submit} disabled={submitting}>
-            {submitting ? "Registering…" : "Register FIR"}
+            {phase === "creating" ? "Creating FIR…" : phase === "uploading" ? "Uploading document…" : "Register FIR"}
           </Btn>
         </footer>
       </div>

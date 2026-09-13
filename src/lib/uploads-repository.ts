@@ -247,6 +247,11 @@ export function cachedEvidence(): RegisterEvidence[] {
   return cacheEvidence;
 }
 
+/** Merge real AI-processing results into the cached DB document (in place). */
+export function applyProcessedDocument(docId: string, patch: Partial<Document>): void {
+  cacheDocuments = cacheDocuments.map((d) => (d.id === docId ? { ...d, ...patch } : d));
+}
+
 export function useSupabaseRecords(): {
   documents: Document[];
   evidence: RegisterEvidence[];
