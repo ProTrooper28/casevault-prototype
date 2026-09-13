@@ -18,13 +18,24 @@ export type RegisterEvidence = {
   hash: string;
   /** linked timeline event id, when the item was added from an event */
   eventId?: string;
-  custodyChain: {
-    stage: string;
-    date: string;
-    time: string;
-    person: string;
-    action: string;
-  }[];
+  custodyChain: CustodyEvent[];
+};
+
+/** One append-only link in a document/evidence custody chain (Step 7). */
+export type CustodyEvent = {
+  stage: string;
+  date: string;
+  time: string;
+  person: string;
+  action: string;
+  /** departments involved, e.g. POLICE → FORENSIC */
+  from_department?: string;
+  to_department?: string;
+  /** document this event concerns */
+  document_id?: string;
+  /** SHA-256 fingerprint of the document at this stage — never recomputed */
+  sha256?: string;
+  status?: "Success" | "Warning" | "Blocked";
 };
 
 export const EVIDENCE_REGISTER: RegisterEvidence[] = [

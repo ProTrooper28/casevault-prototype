@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Badge, Btn, Mono, Panel } from "@/components/kit";
 import { processDocument } from "@/lib/ai-processing";
 import { applyProcessedDocument } from "@/lib/uploads-repository";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import type { Document } from "@/lib/mock-data";
 
 /**
@@ -75,10 +76,24 @@ export function ProcessWithAi({ doc }: { doc: Document }) {
     setError(null);
     setResult(null);
     startStageCycler();
+    // Real audit record — AI processing started (public.audit_trail).
+    void recordAuditEvent({
+      action: `AI processing started on ${doc.name} (${doc.id})`,
+      caseId: doc.caseId,
+      document: doc.name,
+      status: "Success",
+    });
     try {
       const res = await processDocument({ data: { docId: doc.id } });
       if (res.ok) {
         setResult(res);
+        // Real audit record — AI processing completed.
+        void recordAuditEvent({
+          action: `AI processing completed — classified as ${res.documentType}, ${res.textChars} chars extracted (${doc.id})`,
+          caseId: doc.caseId,
+          document: doc.name,
+          status: "Success",
+        });
         // Patch the cached DB document so the existing AI panel + registers
         // show the real results after re-navigation too.
         applyProcessedDocument(doc.id, {
@@ -92,11 +107,23 @@ export function ProcessWithAi({ doc }: { doc: Document }) {
         toast.success("AI processing completed — results saved to the document record.");
       } else {
         setError(res.error);
+        void recordAuditEvent({
+          action: `AI processing failed — ${res.error} (${doc.id})`,
+          caseId: doc.caseId,
+          document: doc.name,
+          status: "Warning",
+        });
         toast.error("AI processing failed.");
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unexpected error during AI processing.";
       setError(msg);
+      void recordAuditEvent({
+        action: `AI processing failed — ${msg} (${doc.id})`,
+        caseId: doc.caseId,
+        document: doc.name,
+        status: "Warning",
+      });
       toast.error("AI processing failed.");
     } finally {
       stopStageCycler();

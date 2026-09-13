@@ -22,7 +22,18 @@ type UnifiedEvidence = {
   integrity: "verified" | "pending" | "compromised";
   status: string;
   hash: string;
-  chain: { stage: string; date: string; time: string; person: string; action: string }[];
+  chain: {
+    stage: string;
+    date: string;
+    time: string;
+    person: string;
+    action: string;
+    from_department?: string;
+    to_department?: string;
+    document_id?: string;
+    sha256?: string;
+    status?: "Success" | "Warning" | "Blocked";
+  }[];
 };
 
 function EvidenceDetail() {
@@ -51,6 +62,11 @@ function EvidenceDetail() {
           time: c.time,
           person: c.person,
           action: c.action,
+          ...(c.from_department ? { from_department: c.from_department } : {}),
+          ...(c.to_department ? { to_department: c.to_department } : {}),
+          ...(c.document_id ? { document_id: c.document_id } : {}),
+          ...(c.sha256 ? { sha256: c.sha256 } : {}),
+          ...(c.status ? { status: c.status } : {}),
         })),
       }
     : runtimeItem
@@ -187,14 +203,57 @@ function EvidenceDetail() {
                     <p className="mt-0.5 text-[12px]">
                       <span className="label-caps">Person</span>{" "}
                       <span className="font-medium">{step.person}</span>
+                      {step.from_department && step.to_department ? (
+                        <span className="ml-3">
+                          <span className="label-caps">Transfer</span>{" "}
+                          <span className="font-medium">
+                            {step.from_department} → {step.to_department}
+                          </span>
+                        </span>
+                      ) : null}
+                      {step.status ? (
+                        <Badge
+                          tone={
+                            step.status === "Success"
+                              ? "success"
+                              : step.status === "Blocked"
+                                ? "alert"
+                                : "warning"
+                          }
+                          className="ml-3"
+                        >
+                          {step.status}
+                        </Badge>
+                      ) : null}
                     </p>
+                    {step.sha256 ? (
+                      <p className="mt-1.5">
+                        <span className="label-caps">SHA-256 at this stage</span>
+                        <Mono className="mt-0.5 block bg-muted px-2 py-1 text-[10.5px] break-all">
+                          {step.sha256}
+                        </Mono>
+                      </p>
+                    ) : null}
                   </div>
                 </li>
               ))}
             </ol>
             <div className="flex items-center gap-2 border-t border-border pt-3 text-[12px] text-muted-foreground">
-              <ShieldCheck className="size-3.5 text-success" />
-              Each transfer is countersigned and hash-chained to the previous record.
+              {item.integrity === "compromised" ? (
+                <>
+                  <ShieldAlert className="size-3.5 text-alert" />
+                  <span className="text-alert">
+                    Document integrity COMPROMISED — the SHA-256 no longer matches the sealed
+                    baseline. Custody history is preserved but the item is flagged.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="size-3.5 text-success" />
+                  Append-only custody record. The document's SHA-256 stays identical through every
+                  transfer — custody never recomputes it.
+                </>
+              )}
             </div>
           </div>
         </div>

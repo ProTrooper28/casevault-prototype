@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   ArrowLeft,
   FileText,
@@ -24,6 +25,7 @@ import { ProcessWithAi } from "@/components/ProcessWithAi";
 import { shortHash } from "@/lib/mock-data";
 import { findDocument, fullAuditTrail } from "@/lib/app-state";
 import { cachedDocuments } from "@/lib/uploads-repository";
+import { recordAuditEvent } from "@/lib/audit-repository";
 
 export const Route = createFileRoute("/documents/$docId")({
   component: DocumentViewer,
@@ -88,6 +90,19 @@ function DocumentViewer() {
   const { docId } = Route.useParams();
   const navigate = useNavigate();
   const doc = findDocument(docId) ?? cachedDocuments().find((d) => d.id === docId);
+
+  // "Document viewed" audit record — real DB documents only (DOC-R…), once per open.
+  useEffect(() => {
+    if (doc && /^DOC-R/.test(doc.id)) {
+      void recordAuditEvent({
+        action: `Document viewed — ${doc.name}`,
+        caseId: doc.caseId,
+        document: doc.name,
+        status: "Success",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docId]);
 
   if (!doc) {
     return (

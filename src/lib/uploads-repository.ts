@@ -6,10 +6,11 @@ import {
   type DocumentRow,
   type EvidenceRow,
 } from "@/lib/supabase";
-import type { RegisterEvidence } from "@/lib/evidence-register";
+import type { RegisterEvidence, CustodyEvent } from "@/lib/evidence-register";
 import { uploadCaseFile, downloadCaseFile } from "@/lib/storage";
 import { calculateSha256 } from "@/lib/hash";
 import { getAppState } from "@/lib/app-state";
+import { recordAuditEvent } from "@/lib/audit-repository";
 
 /* -------------------------------------------------------------------------- */
 /*  Uploads repository — real documents/evidence records backed by Supabase,  */
@@ -36,6 +37,45 @@ function nextEvdId(): string {
 
 function displayDate(d = new Date()): string {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function displayTime(d = new Date()): string {
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/* ---------------------------- custody chain ------------------------------- */
+
+/**
+ * APPEND one custody event to an evidence row's existing chain — never
+ * overwrites history. The SHA-256 recorded is the document's fingerprint as
+ * it exists at this stage; it is never recalculated because custody changed.
+ */
+export async function appendCustodyEvent(evidenceId: string, event: CustodyEvent): Promise<boolean> {
+  const sb = getSupabase();
+  if (!sb) return false;
+  const { data: row, error: fetchErr } = await sb
+    .from("evidence")
+    .select("custody_chain")
+    .eq("id", evidenceId)
+    .maybeSingle<{ custody_chain: CustodyEvent[] | null }>();
+  if (fetchErr || !row) {
+    console.error("[custody] could not read existing chain:", fetchErr?.message ?? "not found");
+    return false;
+  }
+  const chain = [...(row.custody_chain ?? []), event]; // append-only
+  const { error: updErr } = await sb
+    .from("evidence")
+    .update({ custody_chain: chain })
+    .eq("id", evidenceId);
+  if (updErr) {
+    console.error("[custody] append failed:", updErr.message);
+    return false;
+  }
+  // Keep the local cache in step so open detail views update immediately.
+  cacheEvidence = cacheEvidence.map((e) =>
+    e.id === evidenceId ? { ...e, custodyChain: chain } : e,
+  );
+  return true;
 }
 
 /* ------------------------------- documents -------------------------------- */
@@ -189,6 +229,14 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
     .insert(documentToRow(document, stored.path) as never);
   if (docErr) return { ok: false, stage: "documents", error: docErr.message };
 
+  // 3b. Real audit record — Document uploaded (public.audit_trail)
+  await recordAuditEvent({
+    action: `Document uploaded — SHA-256 sealed (${docId})`,
+    caseId: input.caseId,
+    document: input.file.name,
+    status: "Success",
+  });
+
   // 4. Optional evidence registration → public.evidence (same real hash)
   let evidence: RegisterEvidence | null = null;
   if (input.makeEvidence) {
@@ -215,17 +263,26 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
           action: "File uploaded to the case vault",
         },
         {
-          stage: "Submitted to Investigation Unit",
-          date: displayDate(),
-          time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+          stage: "SECURED IN CASEVAULT",
+          date: displayDate(now),
+          time: displayTime(now),
           person: actorName,
-          action: "Registered in the evidence register",
-        },
+          action: `SHA-256 recorded — ${sha256.slice(0, 16)}…`,
+          document_id: docId,
+          sha256,
+          status: "Success",
+        } as CustodyEvent,
       ],
     };
     const { error: evdErr } = await sb.from("evidence").insert(evdRow);
     if (evdErr) return { ok: false, stage: "evidence", error: evdErr.message };
     evidence = evidenceRowToRegister(evdRow);
+    await recordAuditEvent({
+      action: `Evidence added — ${evdId} linked to document ${docId}`,
+      caseId: input.caseId,
+      document: input.evidenceDescription?.trim() || input.file.name,
+      status: "Success",
+    });
   }
 
   // Optimistically reflect in one-shot caches used by detail views.
@@ -370,6 +427,37 @@ export async function verifyDocumentIntegrity(docId: string): Promise<VerifyResu
   cacheDocuments = cacheDocuments.map((d) =>
     d.id === docId ? { ...d, integrity, hash: row.sha256! } : d,
   );
+
+  // Real audit record for the verification outcome (public.audit_trail).
+  await recordAuditEvent({
+    action: match
+      ? `Integrity verified — SHA-256 of stored file matches baseline (${docId})`
+      : `INTEGRITY MISMATCH DETECTED — stored file differs from sealed baseline (${docId})`,
+    caseId: row.case_id,
+    document: row.name,
+    status: match ? "Success" : "Blocked",
+  });
+
+  // Keep any linked evidence's integrity verdict in step with the document.
+  const linkedEvd = cacheEvidence.find((e) => e.hash === row.sha256 && e.caseId === row.case_id);
+  if (linkedEvd) {
+    await sb.from("evidence").update({ integrity }).eq("id", linkedEvd.id);
+    cacheEvidence = cacheEvidence.map((e) =>
+      e.id === linkedEvd.id ? { ...e, integrity } : e,
+    );
+    await appendCustodyEvent(linkedEvd.id, {
+      stage: match ? "INTEGRITY VERIFIED" : "INTEGRITY COMPROMISED",
+      date: displayDate(),
+      time: displayTime(),
+      person: getAppState().session?.name ?? "Investigation Officer",
+      action: match
+        ? `Re-hash of stored bytes matches baseline — ${row.sha256!.slice(0, 16)}…`
+        : `Stored bytes differ from baseline — baseline ${row.sha256!.slice(0, 16)}…`,
+      document_id: docId,
+      sha256: row.sha256!,
+      status: match ? "Success" : "Blocked",
+    });
+  }
 
   return { ok: true, match, storedHash: row.sha256, calculatedHash: calculated, integrity };
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CASES, type Case } from "@/lib/mock-data";
 import { getSupabase, isSupabaseConfigured, type CaseRow } from "@/lib/supabase";
+import { recordAuditEvent } from "@/lib/audit-repository";
 
 /* -------------------------------------------------------------------------- */
 /*  Cases repository — single source of truth for case rows.                  */
@@ -128,6 +129,13 @@ export async function createFirCase(input: CreateCaseInput): Promise<CreateCaseR
   if (error) return { ok: false, error: error.message };
   // Reflect the new FIR immediately in one-shot lookups before the next fetch.
   cache = [newCase, ...(cache ?? [])];
+  // Real audit record — FIR created (public.audit_trail).
+  await recordAuditEvent({
+    action: `FIR created — ${newCase.id} (${newCase.type}${input.sections.length ? `, ${input.sections.join(", ")}` : ""})`,
+    caseId: newCase.id,
+    document: null,
+    status: "Success",
+  });
   return { ok: true, case: newCase, source: "supabase" };
 }
 
@@ -135,6 +143,11 @@ export async function createFirCase(input: CreateCaseInput): Promise<CreateCaseR
 let cache: Case[] | null = null;
 export function allCases(): Case[] {
   return [...(cache ?? []), ...CASES];
+}
+
+/** True when the id resolves to a REAL database case (not the demo dataset). */
+export function isSupabaseCase(id: string): boolean {
+  return (cache ?? []).some((c) => c.id === id);
 }
 
 /** Look up a case in the cache, else demo data. Sync, never fetches. */

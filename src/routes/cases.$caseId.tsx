@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { CaseStatusBadge, Mono } from "@/components/kit";
 import { CaseOverviewTab } from "@/components/case/CaseOverviewTab";
@@ -8,8 +8,10 @@ import { CaseDocumentsTab } from "@/components/case/CaseDocumentsTab";
 import { CaseEvidenceTab } from "@/components/case/CaseEvidenceTab";
 import { CasePeopleTab } from "@/components/case/CasePeopleTab";
 import { CaseAccessTab } from "@/components/case/CaseAccessTab";
+import { CaseAuditTab } from "@/components/case/CaseAuditTab";
 import { CASES } from "@/lib/mock-data";
-import { allCases, getCaseById } from "@/lib/cases-repository";
+import { allCases, getCaseById, isSupabaseCase } from "@/lib/cases-repository";
+import { recordAuditEvent } from "@/lib/audit-repository";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/$caseId")({
@@ -21,13 +23,26 @@ export const Route = createFileRoute("/cases/$caseId")({
   component: CaseWorkspace,
 });
 
-const TABS = ["Overview", "Timeline", "Documents", "Evidence", "People", "Access"] as const;
+const TABS = ["Overview", "Timeline", "Documents", "Evidence", "People", "Access", "Audit"] as const;
 type Tab = (typeof TABS)[number];
 
 function CaseWorkspace() {
   const { caseId } = Route.useParams();
   const [tab, setTab] = useState<Tab>("Overview");
   const c = allCases().find((x) => x.id === caseId);
+
+  // "Case viewed" audit record — real DB cases only, once per open.
+  useEffect(() => {
+    if (c && isSupabaseCase(caseId)) {
+      void recordAuditEvent({
+        action: `Case file viewed — ${c.title}`,
+        caseId,
+        document: null,
+        status: "Success",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
 
   if (!c) {
     return (
@@ -105,6 +120,7 @@ function CaseWorkspace() {
       {tab === "Evidence" ? <CaseEvidenceTab caseId={c.id} /> : null}
       {tab === "People" ? <CasePeopleTab caseId={c.id} /> : null}
       {tab === "Access" ? <CaseAccessTab caseId={c.id} /> : null}
+      {tab === "Audit" ? <CaseAuditTab caseId={c.id} /> : null}
     </AppShell>
   );
 }

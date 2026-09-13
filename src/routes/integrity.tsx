@@ -61,16 +61,21 @@ function Integrity() {
 
     setVerifyResult(result);
     setIntegrity(doc.id, result.integrity);
-    logAudit({
-      user: app.session?.name ?? "Guest Investigator",
-      role: app.session?.roleLabel ?? "Police Officer",
-      action: result.match
-        ? "Real integrity verified — SHA-256 of stored file matches baseline"
-        : "REAL HASH MISMATCH — stored file differs from sealed baseline",
-      document: doc.name,
-      caseId: doc.caseId,
-      status: result.match ? "Success" : "Blocked",
-    });
+    // The DB audit record (with real actor + timestamp) is written inside
+    // verifyDocumentIntegrity() — record the session entry only for the
+    // prototype demo documents that have no database row.
+    if (!/^DOC-R/.test(doc.id)) {
+      logAudit({
+        user: app.session?.name ?? "Guest Investigator",
+        role: app.session?.roleLabel ?? "Police Officer",
+        action: result.match
+          ? "Real integrity verified — SHA-256 of stored file matches baseline"
+          : "REAL HASH MISMATCH — stored file differs from sealed baseline",
+        document: doc.name,
+        caseId: doc.caseId,
+        status: result.match ? "Success" : "Blocked",
+      });
+    }
     if (result.match) {
       toast.success("Integrity verified", { description: "SHA-256 of the stored file matches the baseline." });
     } else {

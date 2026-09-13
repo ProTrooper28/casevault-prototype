@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { Badge, Mono, PageIntro, Td, Th, DemoNotice } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { fullAuditTrail } from "@/lib/app-state";
+import { useAuditEvents, type AuditEvent } from "@/lib/audit-repository";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/audit")({
@@ -21,8 +22,30 @@ function statusTone(status: string) {
   return status === "Success" ? "success" : status === "Blocked" ? "alert" : "warning";
 }
 
+/** Real DB row → the display shape used by this table. */
+function dbEventToEntry(e: AuditEvent) {
+  return {
+    id: `DB#${e.id}`,
+    user: e.user,
+    role: e.role,
+    action: e.action,
+    document: e.document,
+    caseId: e.caseId,
+    status: e.status,
+    date: e.date,
+    time: e.time,
+  };
+}
+
+type AuditEntryView = ReturnType<typeof dbEventToEntry>;
+
 function AuditTrail() {
-  const audit = fullAuditTrail();
+  // Real rows first (public.audit_trail), then session-only prototype entries.
+  const { events: dbEvents, loading: dbLoading, error: dbError } = useAuditEvents({ limit: 200 });
+  const audit: AuditEntryView[] = [
+    ...dbEvents.map(dbEventToEntry),
+    ...fullAuditTrail(),
+  ];
   const initialQ = Route.useSearch().q ?? "";
   const [query, setQuery] = useState(initialQ);
   const [status, setStatus] = useState<(typeof STATUS_FILTERS)[number]>("All");
@@ -152,7 +175,9 @@ function AuditTrail() {
             {filtered.length === 0 ? (
               <tr>
                 <Td colSpan={6} className="py-10 text-center text-muted-foreground">
-                  No audit entries match “{query}”.
+                  {dbLoading
+                    ? "Loading audit events from Supabase…"
+                    : `No audit entries match “${query}”.`}
                 </Td>
               </tr>
             ) : null}
@@ -161,8 +186,9 @@ function AuditTrail() {
       </div>
 
       <p className="text-[12px] text-muted-foreground">
-        Events logged during this session (verify / tamper / restore / grants) appear at the top of
-        the table in the same format as the sealed prototype log.
+        Entries prefixed <Mono>DB#</Mono> are real rows from <Mono>public.audit_trail</Mono>
+        {dbError ? ` (database unavailable: ${dbError})` : ""}. Session-only prototype events
+        (verify / tamper / restore / grants on demo documents) appear below them.
       </p>
     </AppShell>
   );
