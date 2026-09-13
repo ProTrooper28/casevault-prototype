@@ -12,11 +12,45 @@ import type { TimelineAttachment, TimelineEvent } from "@/lib/case-timeline";
 
 /* -------------------------------------------------------------------------- */
 /*  Single tiny store shared by all screens (module-level, frontend only).    */
-/*  Covers: session, document integrity overrides, runtime audit entries,     */
-/*  access grants, uploaded documents and per-event evidence attachments.     */
+/*  Covers: demo-role session, document integrity overrides, runtime audit    */
+/*  entries, access grants, uploaded documents and per-event attachments.     */
 /* -------------------------------------------------------------------------- */
 
-type Session = { name: string; role: string } | null;
+/** Demo role selector — NOT authentication. Two fixed demo identities. */
+export type DemoRole = "POLICE_OFFICER" | "FORENSIC_OFFICER";
+
+export const DEMO_ROLES: Record<
+  DemoRole,
+  { name: string; roleLabel: string; tagline: string }
+> = {
+  POLICE_OFFICER: {
+    name: "Investigation Officer",
+    roleLabel: "Police Officer",
+    tagline: "Investigation & FIR Management",
+  },
+  FORENSIC_OFFICER: {
+    name: "Forensic Officer",
+    roleLabel: "Forensic Officer",
+    tagline: "Forensic Review & Case Handoffs",
+  },
+};
+
+type Session = { role: DemoRole; name: string; roleLabel: string } | null;
+
+const SESSION_KEY = "casevault-demo-role";
+
+function readPersistedRole(): Session {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
+    if (raw === "POLICE_OFFICER" || raw === "FORENSIC_OFFICER") {
+      const demo = DEMO_ROLES[raw];
+      return { role: raw, name: demo.name, roleLabel: demo.roleLabel };
+    }
+  } catch {
+    /* storage unavailable (SSR/private mode) — session stays null */
+  }
+  return null;
+}
 
 /** A document created at runtime via the case Documents "+ Upload Document" flow.
  *  Structurally identical to the seeded `Document` so it renders identically
@@ -60,7 +94,7 @@ export type AppState = {
 };
 
 let state: AppState = {
-  session: null,
+  session: readPersistedRole(),
   integrity: {},
   audit: [],
   grants: ACCESS_GRANTS,
@@ -101,12 +135,45 @@ export function logAudit(entry: Omit<AuditEntry, "id" | "time" | "date">) {
 
 /* --------------------------------- session -------------------------------- */
 
-export function signIn(name: string, role: string) {
-  set({ session: { name, role } });
+/** Demo role selection — persists across refresh; never a real credential. */
+export function signInAsRole(role: DemoRole) {
+  const demo = DEMO_ROLES[role];
+  try {
+    if (typeof localStorage !== "undefined") localStorage.setItem(SESSION_KEY, role);
+  } catch {
+    /* non-fatal */
+  }
+  set({ session: { role, name: demo.name, roleLabel: demo.roleLabel } });
 }
 
 export function signOut() {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* non-fatal */
+  }
   set({ session: null });
+}
+
+/**
+ * Demo identity used for audit entries and record attribution.
+ * Returns the selected role's fixed names; falls back to the police demo
+ * identity when no role has been picked yet (deep-link before login).
+ */
+export function currentActor(): { name: string; role: string; role_: DemoRole | null } {
+  const s = state.session;
+  if (!s) return { name: "Investigation Officer", role: "Police Officer", role_: null };
+  return { name: s.name, role: s.roleLabel, role_: s.role };
+}
+
+/** True when the current demo role is the forensic officer. */
+export function isForensicSession(): boolean {
+  return state.session?.role === "FORENSIC_OFFICER";
+}
+
+/** True when the current demo role is the police officer. */
+export function isPoliceSession(): boolean {
+  return state.session?.role === "POLICE_OFFICER";
 }
 
 /* -------------------------------- integrity ------------------------------- */
@@ -165,6 +232,7 @@ export function uploadDocument(input: {
   notes?: string;
 }): UploadedDocument {
   const { time, date } = stamp();
+  const actor = currentActor();
   const id = `DOC-9${docSeq++}`;
   const meta = DOC_TYPE_MAP[input.docType] ?? { category: "Legal Documents", access: "Internal" as const };
   const hash = pseudoHash(`${input.caseId}:${input.fileName}:${input.docType}`);
@@ -175,7 +243,7 @@ export function uploadDocument(input: {
     name: input.fileName,
     category: meta.category,
     type: input.docType,
-    uploadedBy: "Rahul Mehta",
+    uploadedBy: actor.name,
     date: date,
     version: "1.0",
     access: meta.access,
@@ -196,16 +264,15 @@ export function uploadDocument(input: {
     summary:
       input.notes?.trim() ||
       `Runtime-uploaded ${input.docType.toLowerCase()} ingested through the prototype intake flow.`,
-  };
-  set({ documents: [doc, ...state.documents] });
-  logAudit({
-    user: "Rahul Mehta",
-    role: "Police Investigator",
-    action: `Document uploaded — fingerprint generated (${id})`,
-    document: input.fileName,
-    caseId: input.caseId,
-    status: "Success",
-  });
+  };    set({ documents: [doc, ...state.documents] });
+    logAudit({
+      user: actor.name,
+      role: actor.role,
+      action: `Document uploaded — fingerprint generated (${id})`,
+      document: input.fileName,
+      caseId: input.caseId,
+      status: "Success",
+    });
   return doc;
 }
 
@@ -221,6 +288,7 @@ export function addEvidence(input: {
   collectedDate: string;
 }): AddedEvidence {
   const { time, date } = stamp();
+  const actor = currentActor();
   const id = `EV-${evdSeq++}`;
   const item: AddedEvidence = {
     id,
@@ -231,7 +299,7 @@ export function addEvidence(input: {
     description: input.description || input.name,
     source: input.source || "—",
     collectedDate: input.collectedDate || date,
-    submittedBy: "Rahul Mehta",
+    submittedBy: actor.name,
     custodian: "Investigation Unit",
     status: "Active",
     integrity: "verified",
@@ -240,14 +308,14 @@ export function addEvidence(input: {
     custodyChain: [
       {
         stage: "Collected",
-        person: "Rahul Mehta",
+        person: actor.name,
         date: input.collectedDate || date,
         time: time,
         action: "Collected at source and packaged",
       },
       {
         stage: "Submitted to Investigation Unit",
-        person: "Rahul Mehta",
+        person: actor.name,
         date: date,
         time: time,
         action: "Registered in the evidence register",
@@ -256,8 +324,8 @@ export function addEvidence(input: {
   };
   set({ evidence: [item, ...state.evidence] });
   logAudit({
-    user: "Rahul Mehta",
-    role: "Police Investigator",
+    user: actor.name,
+    role: actor.role,
     action: `Evidence registered (${id})${input.eventId ? " on timeline event" : ""}`,
     document: input.name,
     caseId: input.caseId,

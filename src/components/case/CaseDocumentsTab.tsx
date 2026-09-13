@@ -4,11 +4,12 @@ import { Upload, X, CheckCircle2, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import { getCase } from "@/lib/mock-data";
-import { allDocuments, findDocument, useApp, uploadDocument } from "@/lib/app-state";
+import { allDocuments, findDocument, isPoliceSession, useApp, uploadDocument } from "@/lib/app-state";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { uploadCaseDocument, useSupabaseRecords } from "@/lib/uploads-repository";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { createHandoff } from "@/lib/handoffs-repository";
 import { cn } from "@/lib/utils";
 
 const DOC_TYPES = [
@@ -177,6 +178,24 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const { documents: dbDocs } = useSupabaseRecords();
   const c = getCase(caseId);
   const docs = [...dbDocs, ...allDocuments(app)].filter((d) => d.caseId === caseId);
+  const canUpload = isPoliceSession();
+
+  async function sendToForensic(docId: string, docName: string) {
+    const result = await createHandoff({
+      caseId,
+      documentId: docId,
+      fromUser: app.session?.name ?? "Investigation Officer",
+      toUser: "Forensic Officer",
+      notes: `Sent for forensic review from ${caseId}`,
+    });
+    if (!result.ok) {
+      toast.error("Handoff not created", { description: result.error });
+      return;
+    }
+    toast.success("Sent to Forensic", {
+      description: `${docName} is now Pending in the Forensic Officer's queue.`,
+    });
+  }
 
   return (
     <div className="border border-border bg-card">
@@ -187,9 +206,15 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
             {docs.length} documents on file for {c?.id ?? caseId}
           </p>
         </div>
-        <Btn size="sm" onClick={() => setUploadOpen(true)}>
-          <Upload className="size-3.5" /> Upload Document
-        </Btn>
+        {canUpload ? (
+          <Btn size="sm" onClick={() => setUploadOpen(true)}>
+            <Upload className="size-3.5" /> Upload Document
+          </Btn>
+        ) : (
+          <span className="text-[11.5px] text-muted-foreground">
+            Read-only — uploads are performed by the Investigation Officer
+          </span>
+        )}
       </header>
 
       <div className="overflow-x-auto">
@@ -232,6 +257,14 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       >
                         View
                       </button>
+                      {canUpload ? (
+                        <button
+                          onClick={() => void sendToForensic(d.id, d.name)}
+                          className="border border-border px-2 py-0.5 text-[12px] font-medium hover:bg-secondary"
+                        >
+                          Send to Forensic
+                        </button>
+                      ) : null}
                       <button
                         onClick={() =>
                           navigate({ href: `/audit?q=${encodeURIComponent(d.name)}` })

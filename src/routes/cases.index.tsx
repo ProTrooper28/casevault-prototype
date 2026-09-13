@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Btn, CaseStatusBadge, Mono, Td, Th } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { CASES, DOCUMENTS, type Case } from "@/lib/mock-data";
-import { useApp } from "@/lib/app-state";
+import { isPoliceSession, useApp } from "@/lib/app-state";
 import { EVIDENCE_REGISTER } from "@/lib/evidence-register";
 import { useCases } from "@/lib/cases-repository";
 import { CreateFirModal } from "@/components/CreateFirModal";
@@ -76,7 +76,7 @@ function Cases() {
     closed: dbCases.filter((c) => c.status === "Closed").length,
   };
 
-  const officer = session?.name ?? "Rahul Mehta";
+  const officer = session?.name ?? "Investigation Officer";
 
   return (
     <AppShell title="Cases">
@@ -108,9 +108,11 @@ function Cases() {
           <span className="hidden text-[11.5px] text-muted-foreground sm:block">
             Click a case to open its workspace
           </span>
-          <Btn size="sm" onClick={() => setShowCreateFir(true)}>
-            <Plus className="size-3.5" /> Create FIR
-          </Btn>
+          {isPoliceSession() ? (
+            <Btn size="sm" onClick={() => setShowCreateFir(true)}>
+              <Plus className="size-3.5" /> Create FIR
+            </Btn>
+          ) : null}
         </span>
       </div>
 

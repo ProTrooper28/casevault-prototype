@@ -23,7 +23,7 @@ import {
   Th,
 } from "@/components/kit";
 import { DOCUMENTS, shortHash } from "@/lib/mock-data";
-import { allDocuments, docIntegrity, findDocument, logAudit, setIntegrity, useApp } from "@/lib/app-state";
+import { allDocuments, currentActor, docIntegrity, findDocument, logAudit, setIntegrity, useApp } from "@/lib/app-state";
 import { verifyDocumentIntegrity, type VerifyResult } from "@/lib/uploads-repository";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ function Integrity() {
     setIntegrity(doc.id, result.integrity);
     logAudit({
       user: app.session?.name ?? "Guest Investigator",
-      role: "Police Investigator",
+      role: app.session?.roleLabel ?? "Police Officer",
       action: result.match
         ? "Real integrity verified — SHA-256 of stored file matches baseline"
         : "REAL HASH MISMATCH — stored file differs from sealed baseline",
@@ -82,8 +82,8 @@ function Integrity() {
     if (!doc) return;
     setIntegrity(doc.id, "compromised");
     logAudit({
-      user: "Simulation",
-      role: "System",
+      user: currentActor().name,
+      role: currentActor().role,
       action: "SIMULATED TAMPER — hash mismatch detected",
       document: doc.name,
       caseId: doc.caseId,
@@ -96,7 +96,7 @@ function Integrity() {
     setIntegrity(doc.id, "verified");
     logAudit({
       user: app.session?.name ?? "Guest Investigator",
-      role: "Police Investigator",
+      role: app.session?.roleLabel ?? "Police Officer",
       action: "Original document restored from sealed copy",
       document: doc.name,
       caseId: doc.caseId,

@@ -1,11 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { Lock, ArrowRight, Fingerprint } from "lucide-react";
+import { ArrowRight, Fingerprint, ShieldCheck, Shield } from "lucide-react";
 import { BrandMark } from "@/components/BrandLogo";
 import { Badge, Btn } from "@/components/kit";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { signIn } from "@/lib/app-state";
+import { DEMO_ROLES, signInAsRole, type DemoRole } from "@/lib/app-state";
 
 export const Route = createFileRoute("/")({
   component: Login,
@@ -13,23 +10,13 @@ export const Route = createFileRoute("/")({
 
 function Login() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
-  function login() {
-    if (!email.trim() || !password.trim()) {
-      setError("Enter an email and password to continue (any value works in this prototype).");
-      return;
-    }
-    signIn("Rahul Mehta", "Police Investigator");
+  function selectRole(role: DemoRole) {
+    signInAsRole(role);
     navigate({ to: "/dashboard" });
   }
 
-  function guest() {
-    signIn("Guest Investigator", "Police Investigator");
-    navigate({ to: "/dashboard" });
-  }
+  const roleIcons = { POLICE_OFFICER: Shield, FORENSIC_OFFICER: ShieldCheck } as const;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -98,65 +85,38 @@ function Login() {
             </p>
           </div>
 
-          <h1 className="text-xl font-semibold">Sign in to CaseVault AI</h1>
+          <h1 className="text-xl font-semibold">Select your demo role</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Central investigation document vault — prototype access.
+            Central investigation document vault — demonstration role selection.
           </p>
 
-          <form
-            className="mt-7 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              login();
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="username"
-                placeholder="investigator@ncrb.gov.in"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError(null);
-                }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(null);
-                }}
-              />
-            </div>
-
-            {error ? <p className="text-xs font-medium text-alert">{error}</p> : null}
-
-            <Btn type="submit" className="w-full">
-              <Lock className="size-3.5" /> Login
-            </Btn>
-          </form>
-
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="label-caps">or</span>
-            <span className="h-px flex-1 bg-border" />
+          <div className="mt-7 space-y-3">
+            {(Object.keys(DEMO_ROLES) as DemoRole[]).map((role) => {
+              const demo = DEMO_ROLES[role];
+              const Icon = roleIcons[role];
+              return (
+                <button
+                  key={role}
+                  onClick={() => selectRole(role)}
+                  className="flex w-full items-center gap-4 border border-border bg-card px-4 py-4 text-left transition-colors hover:border-primary/40 hover:bg-secondary/60"
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center border border-border bg-secondary text-primary">
+                    <Icon className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[14.5px] font-semibold">Login as {demo.roleLabel}</span>
+                    <span className="block text-[12.5px] text-muted-foreground">{demo.tagline}</span>
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              );
+            })}
           </div>
 
-          <Btn variant="outline" className="w-full" onClick={guest}>
-            Continue as Guest <ArrowRight className="size-3.5" />
-          </Btn>
-          <p className="mt-3 text-center text-[11.5px] text-muted-foreground">
-            Guest mode opens the demo workspace with read-only-style prototype data.
+          <p className="mt-5 border border-border bg-secondary/40 px-3 py-2.5 text-[11.5px] leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">Demo role selection</span> — no password,
+            email or OTP. This is a controlled SIH demonstration selector, not authentication; both
+            roles operate on the same prototype vault.
           </p>
         </div>
       </div>

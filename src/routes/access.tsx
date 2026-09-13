@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ACCESS_GRANTS, CASES, PERMISSION_KEYS, ROLES } from "@/lib/mock-data";
-import { addGrant, logAudit, useApp } from "@/lib/app-state";
+import { addGrant, currentActor, logAudit, useApp } from "@/lib/app-state";
 
 export const Route = createFileRoute("/access")({
   component: AccessManagement,
@@ -54,8 +54,8 @@ function AccessManagement() {
       status: "Active",
     });
     logAudit({
-      user: "Guest Investigator",
-      role: "Police Investigator",
+      user: currentActor().name,
+      role: currentActor().role,
       action: `Access granted to ${form.user.trim()} (${form.role})`,
       document: "Access management",
       caseId: form.scope,

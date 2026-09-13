@@ -4,7 +4,7 @@ import { Badge, Btn, Mono, Td, Th } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ROLES } from "@/lib/mock-data";
-import { addGrant, logAudit, revokeGrant, useApp } from "@/lib/app-state";
+import { addGrant, currentActor, logAudit, revokeGrant, useApp } from "@/lib/app-state";
 import { cn } from "@/lib/utils";
 
 export function CaseAccessTab({ caseId }: { caseId: string }) {
@@ -24,8 +24,8 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
       status: "Active",
     });
     logAudit({
-      user: "Rahul Mehta",
-      role: "Police Investigator",
+      user: currentActor().name,
+      role: currentActor().role,
       action: `Access granted to ${form.user.trim()} (${form.role})`,
       document: "Access management",
       caseId,
@@ -38,8 +38,8 @@ export function CaseAccessTab({ caseId }: { caseId: string }) {
   function revoke(user: string) {
     revokeGrant(user, caseId);
     logAudit({
-      user: "Rahul Mehta",
-      role: "Police Investigator",
+      user: currentActor().name,
+      role: currentActor().role,
       action: `Access revoked for ${user}`,
       document: "Access management",
       caseId,

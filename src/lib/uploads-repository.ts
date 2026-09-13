@@ -154,6 +154,7 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
   }
 
   const session = getAppState().session;
+  const actorName = session?.name ?? "Investigation Officer";
   const docId = nextDocId();
   const document: Document = {
     id: docId,
@@ -161,7 +162,7 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
     name: input.file.name,
     category: "Evidence Records",
     type: input.docType,
-    uploadedBy: session?.name ?? "Rahul Mehta",
+    uploadedBy: actorName,
     date: displayDate(),
     version: "1.0",
     integrity: "verified",
@@ -199,7 +200,7 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
       description: input.evidenceDescription?.trim() || input.file.name,
       evidence_type: "Document",
       collected: input.collectedDate?.trim() || displayDate(),
-      submitted_by: session?.name ?? "Rahul Mehta",
+      submitted_by: actorName,
       custodian: "Investigation Unit",
       integrity: "verified",
       status: "Active",
@@ -210,14 +211,14 @@ export async function uploadCaseDocument(input: UploadDocInput): Promise<UploadR
           stage: "Collected",
           date: input.collectedDate?.trim() || displayDate(),
           time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }),
-          person: session?.name ?? "Rahul Mehta",
+          person: actorName,
           action: "File uploaded to the case vault",
         },
         {
           stage: "Submitted to Investigation Unit",
           date: displayDate(),
           time: now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false }),
-          person: session?.name ?? "Rahul Mehta",
+          person: actorName,
           action: "Registered in the evidence register",
         },
       ],

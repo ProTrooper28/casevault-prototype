@@ -13,7 +13,7 @@ function Profile() {
   const navigate = useNavigate();
   const { session, audit } = useApp();
   const name = session?.name ?? CURRENT_USER.name;
-  const role = session?.role ?? CURRENT_USER.role;
+  const role = session?.roleLabel ?? CURRENT_USER.role;
   const roleDef = ROLES.find((r) => r.name === role);
   const myGrants = ACCESS_GRANTS.filter((g) => g.user === name);
 
@@ -59,7 +59,10 @@ function Profile() {
           <dl className="mt-4 space-y-3 border-t border-border pt-4">
             <Field label="Badge number" value={<Mono>{CURRENT_USER.badge}</Mono>} />
             <Field label="Unit" value={CURRENT_USER.unit} />
-            <Field label="Sign-in mode" value={session?.name === "Guest Investigator" ? "Guest" : "Credentials (prototype)"} />
+            <Field
+              label="Sign-in mode"
+              value={session ? `Demo role — ${session.roleLabel}` : "Demo role selection"}
+            />
           </dl>
         </Panel>
 

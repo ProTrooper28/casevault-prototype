@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { signOut, useApp } from "@/lib/app-state";
+import { signOut, useApp, isForensicSession } from "@/lib/app-state";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -17,6 +17,7 @@ import {
   X,
   Sparkles,
   LogOut,
+  ArrowLeftRight,
 } from "lucide-react";
 import { BrandLockup, BrandMark } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
@@ -24,15 +25,16 @@ import { CURRENT_USER, NOTIFICATIONS } from "@/lib/mock-data";
 import { Badge } from "@/components/kit";
 
 const NAV = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/cases", label: "Cases", icon: FolderOpen },
-  { to: "/documents", label: "Documents", icon: FileText },
-  { to: "/evidence", label: "Evidence", icon: Boxes },
-  { to: "/search", label: "Smart Search", icon: Search },
-  { to: "/ai-processing", label: "AI Processing", icon: Sparkles },
-  { to: "/integrity", label: "Integrity", icon: ShieldCheck },
-  { to: "/audit", label: "Audit Trail", icon: ScrollText },
-  { to: "/access", label: "Access Management", icon: Users },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, policeOnly: false },
+  { to: "/cases", label: "Cases", icon: FolderOpen, policeOnly: false },
+  { to: "/documents", label: "Documents", icon: FileText, policeOnly: false },
+  { to: "/evidence", label: "Evidence", icon: Boxes, policeOnly: false },
+  { to: "/handoffs", label: "Forensic Handoffs", icon: ArrowLeftRight, policeOnly: false },
+  { to: "/search", label: "Smart Search", icon: Search, policeOnly: true },
+  { to: "/ai-processing", label: "AI Processing", icon: Sparkles, policeOnly: true },
+  { to: "/integrity", label: "Integrity", icon: ShieldCheck, policeOnly: false },
+  { to: "/audit", label: "Audit Trail", icon: ScrollText, policeOnly: false },
+  { to: "/access", label: "Access Management", icon: Users, policeOnly: true },
 ] as const;
 
 const BOTTOM_NAV = [
@@ -56,18 +58,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <p className="px-2.5 pb-1.5 text-[10.5px] font-semibold tracking-[0.08em] text-sidebar-muted/80 uppercase">
           Workspace
         </p>
-        {NAV.map(({ to, label, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
-            onClick={onNavigate}
-            className={linkBase}
-            activeProps={{ className: linkActive }}
-          >
-            <Icon className="size-4 shrink-0" />
-            <span className="truncate">{label}</span>
-          </Link>
-        ))}
+        {NAV.map(({ to, label, icon: Icon, policeOnly }) =>
+          policeOnly && isForensicSession() ? null : (
+            <Link
+              key={to}
+              to={to}
+              onClick={onNavigate}
+              className={linkBase}
+              activeProps={{ className: linkActive }}
+            >
+              <Icon className="size-4 shrink-0" />
+              <span className="truncate">{label}</span>
+            </Link>
+          ),
+        )}
       </nav>
 
       <div className="space-y-0.5 border-t border-sidebar-border px-2 py-3">
@@ -106,7 +110,7 @@ export function AppShell({ title, children }: { title: string; children: ReactNo
   const navigate = useNavigate();
   const { session } = useApp();
   const userName = session?.name ?? CURRENT_USER.name;
-  const userRole = session?.role ?? CURRENT_USER.role;
+  const userRole = session?.roleLabel ?? CURRENT_USER.role;
   const initials = userName
     .split(" ")
     .map((w) => w[0])

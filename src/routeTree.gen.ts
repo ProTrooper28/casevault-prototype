@@ -14,6 +14,7 @@ import { Route as AccessRouteImport } from './routes/access'
 import { Route as AiProcessingRouteImport } from './routes/ai-processing'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as HandoffsRouteImport } from './routes/handoffs'
 import { Route as IntegrityRouteImport } from './routes/integrity'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SearchRouteImport } from './routes/search'
@@ -48,6 +49,11 @@ const AuditRoute = AuditRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HandoffsRoute = HandoffsRouteImport.update({
+  id: '/handoffs',
+  path: '/handoffs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntegrityRoute = IntegrityRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/ai-processing': typeof AiProcessingRoute
   '/audit': typeof AuditRoute
   '/dashboard': typeof DashboardRoute
+  '/handoffs': typeof HandoffsRoute
   '/integrity': typeof IntegrityRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/ai-processing': typeof AiProcessingRoute
   '/audit': typeof AuditRoute
   '/dashboard': typeof DashboardRoute
+  '/handoffs': typeof HandoffsRoute
   '/integrity': typeof IntegrityRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/ai-processing': typeof AiProcessingRoute
   '/audit': typeof AuditRoute
   '/dashboard': typeof DashboardRoute
+  '/handoffs': typeof HandoffsRoute
   '/integrity': typeof IntegrityRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -161,6 +170,7 @@ export interface FileRouteTypes {
     | '/ai-processing'
     | '/audit'
     | '/dashboard'
+    | '/handoffs'
     | '/integrity'
     | '/profile'
     | '/search'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/ai-processing'
     | '/audit'
     | '/dashboard'
+    | '/handoffs'
     | '/integrity'
     | '/profile'
     | '/search'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/ai-processing'
     | '/audit'
     | '/dashboard'
+    | '/handoffs'
     | '/integrity'
     | '/profile'
     | '/search'
@@ -213,6 +225,7 @@ export interface RootRouteChildren {
   AiProcessingRoute: typeof AiProcessingRoute
   AuditRoute: typeof AuditRoute
   DashboardRoute: typeof DashboardRoute
+  HandoffsRoute: typeof HandoffsRoute
   IntegrityRoute: typeof IntegrityRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/handoffs': {
+      id: '/handoffs'
+      path: '/handoffs'
+      fullPath: '/handoffs'
+      preLoaderRoute: typeof HandoffsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/integrity': {
@@ -341,6 +361,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiProcessingRoute: AiProcessingRoute,
   AuditRoute: AuditRoute,
   DashboardRoute: DashboardRoute,
+  HandoffsRoute: HandoffsRoute,
   IntegrityRoute: IntegrityRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,

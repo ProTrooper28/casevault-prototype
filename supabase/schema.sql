@@ -228,3 +228,38 @@ exception
   when duplicate_object then null;
 end
 $policy$;
+
+-- ------------------------------------------------- workflow handoffs -------
+-- Step 6: police → forensic document handoffs (demo workflow, real rows).
+create table if not exists public.workflow_handoffs (
+  id               uuid primary key default gen_random_uuid(),
+  case_id          text not null,
+  document_id      text,
+  from_department  text not null default 'POLICE',
+  from_user        text not null,
+  to_department    text not null default 'FORENSIC',
+  to_user          text not null,
+  status           text not null default 'Pending'
+                   check (status in ('Pending', 'Accepted', 'Rejected')),
+  notes            text,
+  rejection_reason text,
+  created_at       timestamptz not null default now(),
+  accepted_at      timestamptz,
+  rejected_at      timestamptz
+);
+
+create index if not exists handoffs_case_id_idx on public.workflow_handoffs (case_id);
+create index if not exists handoffs_status_idx on public.workflow_handoffs (status);
+create index if not exists handoffs_created_at_idx on public.workflow_handoffs (created_at desc);
+
+alter table public.workflow_handoffs enable row level security;
+
+do $policy$
+begin
+  drop policy if exists "anon full access handoffs" on public.workflow_handoffs;
+  create policy "anon full access handoffs" on public.workflow_handoffs
+    for all to anon using (true) with check (true);
+exception
+  when duplicate_object then null;
+end
+$policy$;
