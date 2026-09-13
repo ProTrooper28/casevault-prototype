@@ -1,7 +1,6 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.schemas import (
     HealthResponse,
     IndexDocumentRequest,
@@ -15,8 +14,15 @@ from app.schemas import (
     TimelineRequest,
     TimelineEvent,
     TimelineResponse,
+    RedactionDetectRequest,
+    RedactionDetectResponse,
+    RedactionSpansRequest,
+    RedactionSpansResponse,
+    RedactionSpan,
 )
 from app import search_service
+from app import redaction_service
+from app.supabase_client import supabase
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("nyaya_setu_search")
@@ -119,4 +125,51 @@ def get_timeline(req: TimelineRequest):
     return TimelineResponse(
         case_id=req.case_id,
         events=[TimelineEvent(**e) for e in events],
+    )
+
+@app.post("/redact/detect", response_model=RedactionDetectResponse)
+def detect_redactions(req: RedactionDetectRequest):
+    try:
+        result = redaction_service.detect_redactions(
+            document_id=req.document_id,
+            requesting_officer_id=req.requesting_officer_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+    return RedactionDetectResponse(**result)
+
+
+@app.post("/redact/spans", response_model=RedactionSpansResponse)
+def get_redaction_spans(req: RedactionSpansRequest):
+    """
+    Fetch the spans already detected for a document, so the frontend
+    can render the redaction toggle UI (highlight each span, let the
+    officer confirm/reject before anything is actually blacked out).
+    """
+    access_check = supabase.rpc(
+        "has_case_access",
+        {"check_case_id": None, "check_officer_id": req.requesting_officer_id},
+    )
+    result = (
+        supabase.table("redaction_spans")
+        .select("id, entity_type, entity_text, start_offset, end_offset, confidence_score, detection_method, review_status, case_id")
+        .eq("document_id", req.document_id)
+        .execute()
+    )
+    rows = result.data or []
+
+    if rows and rows[0]["case_id"]:
+        allowed = supabase.rpc(
+            "has_case_access",
+            {"check_case_id": rows[0]["case_id"], "check_officer_id": req.requesting_officer_id},
+        ).execute()
+        if not allowed.data:
+            raise HTTPException(status_code=403, detail="Not authorized for this document's case")
+
+    return RedactionSpansResponse(
+        document_id=req.document_id,
+        spans=[RedactionSpan(**{k: v for k, v in r.items() if k != "case_id"}) for r in rows],
     )

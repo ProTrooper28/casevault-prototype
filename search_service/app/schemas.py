@@ -67,3 +67,34 @@ class TimelineEvent(BaseModel):
 class TimelineResponse(BaseModel):
     case_id: str
     events: List[TimelineEvent]
+
+class RedactionDetectRequest(BaseModel):
+    document_id: str
+    requesting_officer_id: str
+
+
+class RedactionDetectResponse(BaseModel):
+    document_id: str
+    case_id: str
+    spans_detected: int
+
+
+class RedactionSpan(BaseModel):
+    id: str
+    entity_type: str
+    entity_text: str
+    start_offset: int
+    end_offset: int
+    confidence_score: float
+    detection_method: str
+    review_status: str
+
+
+class RedactionSpansRequest(BaseModel):
+    document_id: str
+    requesting_officer_id: str
+
+
+class RedactionSpansResponse(BaseModel):
+    document_id: str
+    spans: List[RedactionSpan]

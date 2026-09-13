@@ -9,10 +9,57 @@ create table if not exists case_access (
     constraint uq_case_access unique (case_id, profile_id)
 );
 
-comment on table case_access is 'Per-officer access grants to a case. A case creator/lead investigator always has implicit access even without a row here — see the two search functions.';
+comment on table case_access is 'Per-officer access grants to a case. A case creator/lead investigator always has implicit access even without a row here.';
 
 create index if not exists idx_case_access_case_id    on case_access(case_id);
 create index if not exists idx_case_access_profile_id on case_access(profile_id);
+
+create table if not exists redaction_spans (
+    id                uuid primary key default gen_random_uuid(),
+    document_id       uuid not null references documents(id) on delete cascade,
+    case_id           uuid not null references cases(id) on delete cascade,
+
+    entity_type       text not null check (entity_type in (
+                          'person_name', 'location', 'organization',
+                          'phone_number', 'aadhaar_number', 'pan_number', 'email'
+                      )),
+    entity_text       text not null,
+    start_offset      int not null,
+    end_offset        int not null,
+    confidence_score  numeric(4,3) not null check (confidence_score >= 0 and confidence_score <= 1),
+    detection_method  text not null check (detection_method in ('ner_model', 'regex_pattern')),
+
+    review_status     text not null default 'pending_review'
+                          check (review_status in ('pending_review', 'confirmed', 'rejected')),
+    reviewed_by        uuid references profiles(id),
+    reviewed_at        timestamptz,
+
+    created_at         timestamptz not null default now()
+);
+
+comment on table redaction_spans is 'Detected sensitive text spans awaiting officer confirmation before actual redaction is applied.';
+
+create index if not exists idx_redaction_spans_document_id   on redaction_spans(document_id);
+create index if not exists idx_redaction_spans_case_id       on redaction_spans(case_id);
+create index if not exists idx_redaction_spans_review_status on redaction_spans(review_status);
+
+create or replace function has_case_access(check_case_id uuid, check_officer_id uuid)
+returns boolean
+language sql stable
+as $$
+    select exists (
+        select 1 from cases c
+        where c.id = check_case_id
+          and (
+                c.created_by = check_officer_id
+                or c.lead_investigator_id = check_officer_id
+                or exists (
+                    select 1 from case_access ca
+                    where ca.case_id = c.id and ca.profile_id = check_officer_id
+                )
+              )
+    );
+$$;
 
 create or replace function match_document_chunks(
     query_embedding        vector(384),
