@@ -6,16 +6,20 @@ import { z } from "zod";
 /*  AI processing (Node side) — the browser never touches the raw file or     */
 /*  service credentials. Flow:                                                */
 /*                                                                            */
-/*    browser → processDocument (createServerFn, server-only)                 */
+/*    browser → processDocument (createServerFn, RPC to server-only handler)  */
 /*      1. read public.documents row (storage_path, case_id)                  */
 /*      2. download bytes from the PRIVATE case-documents bucket              */
 /*         (SUPABASE_SERVICE_ROLE_KEY when present, else anon)                */
 /*      3. POST the real bytes to the Python/FastAPI service (/process)       */
 /*      4. write results into the existing JSONB/metadata columns             */
 /*                                                                            */
-/*  The service-role key is read from the server environment only — it is     */
-/*  never shipped to React. Falls back to the anon key when not provided      */
-/*  (matches the prototype's permissive RLS).                                 */
+/*  NOTE: intentionally NOT under a "server" directory — TanStack Start's    */
+/*  import-protection denies client imports of server-dir path patterns.      */
+/*  createServerFn files must stay client-importable; the handler body is     */
+/*  stripped from the client bundle automatically.                            */
+/*  The service-role key is read inside the handler from the server           */
+/*  environment only — it is never shipped to React. Falls back to the        */
+/*  anon key when not provided (matches the prototype's permissive RLS).      */
 /* -------------------------------------------------------------------------- */
 
 export type ProcessDocumentResult =

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Badge, Btn, Mono, Panel } from "@/components/kit";
-import { processDocument } from "@/server/ai-processing";
+import { processDocument } from "@/lib/ai-processing";
 import { applyProcessedDocument } from "@/lib/uploads-repository";
 import type { Document } from "@/lib/mock-data";
 
