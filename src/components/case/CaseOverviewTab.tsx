@@ -1,14 +1,28 @@
 import { useMemo } from "react";
 import { Field, Mono, Td, Th } from "@/components/kit";
 import { Timeline } from "@/components/shared";
-import { CASES, getCase } from "@/lib/mock-data";
+import { allCases } from "@/lib/cases-repository";
 import { caseTimeline } from "@/lib/case-timeline";
 import { fullAuditTrail } from "@/lib/app-state";
 
 export function CaseOverviewTab({ caseId }: { caseId: string }) {
-  const c = getCase(caseId)!;
+  // Supabase-aware lookup: mock-data's getCase() only knows the demo cases,
+  // which crashed real FIR workspaces (undefined.people). The route loader
+  // warms this repository cache on cold SSR, so the hit is synchronous here.
+  const c = allCases().find((x) => x.id === caseId);
   const events = caseTimeline(caseId);
   const audit = useMemo(() => fullAuditTrail().filter((a) => a.caseId === caseId), [caseId]);
+
+  if (!c) {
+    return (
+      <div className="border border-border bg-card px-4 py-10 text-center">
+        <p className="text-sm text-muted-foreground">
+          Case record for <Mono>{caseId}</Mono> could not be loaded. Try refreshing — if it persists,
+          the case may not exist in the connected database.
+        </p>
+      </div>
+    );
+  }
 
   const rolesShown = c.people.map((p) => ({
     name: p.name,
@@ -129,6 +143,3 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
     </div>
   );
 }
-
-// keep CASES referenced for type-safety of lookups
-void CASES;

@@ -1,5 +1,5 @@
 import { Td, Th } from "@/components/kit";
-import { getCase } from "@/lib/mock-data";
+import { allCases } from "@/lib/cases-repository";
 
 const ACCESS_LEVEL: Record<string, string> = {
   Complainant: "Statement access",
@@ -10,7 +10,16 @@ const ACCESS_LEVEL: Record<string, string> = {
 };
 
 export function CasePeopleTab({ caseId }: { caseId: string }) {
-  const c = getCase(caseId)!;
+  // Supabase-aware lookup — see CaseOverviewTab for rationale.
+  const c = allCases().find((x) => x.id === caseId);
+
+  if (!c) {
+    return (
+      <div className="border border-border bg-card px-4 py-10 text-center">
+        <p className="text-sm text-muted-foreground">Case record could not be loaded for this tab.</p>
+      </div>
+    );
+  }
 
   const rows = [
     // officers first
