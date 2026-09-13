@@ -15,7 +15,7 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
 
   if (!c) {
     return (
-      <div className="border border-border bg-card px-4 py-10 text-center">
+      <div className="rounded-sm border border-border bg-card px-4 py-10 text-center">
         <p className="text-sm text-muted-foreground">
           Case record for <Mono>{caseId}</Mono> could not be loaded. Try refreshing — if it persists,
           the case may not exist in the connected database.
@@ -42,7 +42,7 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Case information */}
-        <div className="border border-border bg-card lg:col-span-2">
+        <div className="rounded-sm border border-border bg-card lg:col-span-2">
           <header className="border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">Case Information</h2>
           </header>
@@ -65,7 +65,7 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
         </div>
 
         {/* Recent activity */}
-        <div className="border border-border bg-card">
+        <div className="rounded-sm border border-border bg-card">
           <header className="border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">Recent Activity</h2>
           </header>
@@ -97,7 +97,7 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
       </div>
 
       {/* Key people */}
-      <div className="border border-border bg-card">
+      <div className="rounded-sm border border-border bg-card">
         <header className="border-b border-border px-4 py-2.5">
           <h2 className="text-sm font-semibold">Key People</h2>
         </header>
@@ -124,7 +124,7 @@ export function CaseOverviewTab({ caseId }: { caseId: string }) {
       </div>
 
       {/* Latest chronology preview */}
-      <div className="border border-border bg-card">
+      <div className="rounded-sm border border-border bg-card">
         <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <h2 className="text-sm font-semibold">Chronology Preview</h2>
           <span className="text-[11.5px] text-muted-foreground">{events.length} recorded events</span>

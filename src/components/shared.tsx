@@ -78,7 +78,7 @@ export function DocumentsTable({ documents }: { documents: Document[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-card">
+    <div className="overflow-x-auto rounded-sm border border-border bg-card">
       <table className="w-full min-w-[760px] border-collapse">
         <thead>
           <tr>

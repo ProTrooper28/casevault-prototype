@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, ScrollText, X } from "lucide-react";
+import { Search, ScrollText, X, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { Badge, Mono, PageIntro, Td, Th, DemoNotice } from "@/components/kit";
+import { Badge, BtnLink, Mono, PageIntro, Td, Th, DemoNotice } from "@/components/kit";
 import { Input } from "@/components/ui/input";
 import { fullAuditTrail } from "@/lib/app-state";
 import { useAuditEvents, type AuditEvent } from "@/lib/audit-repository";
@@ -70,32 +70,37 @@ function AuditTrail() {
   return (
     <AppShell title="Audit Trail">
       <PageIntro
-        title="Audit Trail"
-        description="Every upload, verification, grant and blocked attempt is recorded with timestamp, actor and outcome. Entries are append-only."
+        title="Investigation Audit Log"
+        description="Every upload, verification, transfer and blocked attempt is recorded with timestamp, actor and outcome. Entries are append-only."
         actions={
-          <Badge tone="ai">
-            <ScrollText className="size-3" /> Append-only record
+          <Badge tone="gold">
+            <ScrollText className="size-3" /> Official investigation log
           </Badge>
         }
       />
-      <DemoNotice />
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total events", value: counts.total, tone: "neutral" as const },
-          { label: "Success", value: counts.success, tone: "success" as const },
-          { label: "Warning", value: counts.warning, tone: "warning" as const },
-          { label: "Blocked", value: counts.blocked, tone: "alert" as const },
-        ].map((s) => (
-          <div key={s.label} className="rounded-md border border-border bg-card px-4 py-3">
-            <span className="label-caps">{s.label}</span>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{s.value}</p>
-            <Badge tone={s.tone} className="mt-1.5">
-              {s.label}
-            </Badge>
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-sm border border-border bg-card px-4 py-2.5 text-[13px]">
+        <span className="label-caps">Record summary</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="label-caps">Total events</span>
+          <span className="text-base font-semibold tabular-nums">{counts.total}</span>
+        </span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="label-caps">Success</span>
+          <span className="font-semibold tabular-nums text-success">{counts.success}</span>
+        </span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="label-caps">Warning</span>
+          <span className="font-semibold tabular-nums text-warning">{counts.warning}</span>
+        </span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="label-caps">Blocked</span>
+          <span className="font-semibold tabular-nums text-alert">{counts.blocked}</span>
+        </span>
+        <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
+          <ShieldCheck className="size-3.5 text-success" /> Read-only · append-only record
+        </span>
       </div>
 
       {/* Toolbar */}
@@ -115,7 +120,7 @@ function AuditTrail() {
               key={f}
               onClick={() => setStatus(f)}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                "rounded-sm border px-3 py-1.5 text-[13px] font-medium transition-colors",
                 status === f
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-card text-muted-foreground hover:bg-secondary",
@@ -138,14 +143,15 @@ function AuditTrail() {
         ) : null}
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-md border border-border bg-card">
+      {/* Chronological log */}
+      <div className="overflow-x-auto rounded-sm border border-border bg-card">
         <table className="w-full min-w-[860px] border-collapse">
           <thead>
             <tr>
-              <Th>Timestamp</Th>
-              <Th>User</Th>
+              <Th>Date &amp; Time</Th>
               <Th>Action</Th>
+              <Th>User</Th>
+              <Th>Role</Th>
               <Th>Document</Th>
               <Th>Case</Th>
               <Th>Status</Th>
@@ -155,15 +161,14 @@ function AuditTrail() {
             {filtered.map((a) => (
               <tr key={a.id} className="transition-colors hover:bg-secondary/60">
                 <Td className="whitespace-nowrap text-muted-foreground">
-                  {a.date}, {a.time}
+                  {a.date}
+                  <span className="ml-1.5 font-medium text-foreground">{a.time}</span>
                   <Mono className="block text-[10.5px]">{a.id}</Mono>
                 </Td>
-                <Td>
-                  <p className="font-medium">{a.user}</p>
-                  <p className="text-[11px] text-muted-foreground">{a.role}</p>
-                </Td>
-                <Td>{a.action}</Td>
-                <Td className="text-muted-foreground">{a.document}</Td>
+                <Td className="font-medium">{a.action}</Td>
+                <Td className="whitespace-nowrap">{a.user}</Td>
+                <Td className="whitespace-nowrap text-muted-foreground">{a.role}</Td>
+                <Td className="max-w-[220px] truncate text-muted-foreground">{a.document}</Td>
                 <Td>
                   <Mono className="text-[12px]">{a.caseId}</Mono>
                 </Td>
@@ -174,7 +179,7 @@ function AuditTrail() {
             ))}
             {filtered.length === 0 ? (
               <tr>
-                <Td colSpan={6} className="py-10 text-center text-muted-foreground">
+                <Td colSpan={7} className="py-10 text-center text-muted-foreground">
                   {dbLoading
                     ? "Loading audit events from Supabase…"
                     : `No audit entries match “${query}”.`}
@@ -185,11 +190,14 @@ function AuditTrail() {
         </table>
       </div>
 
-      <p className="text-[12px] text-muted-foreground">
+      <DemoNotice>
         Entries prefixed <Mono>DB#</Mono> are real rows from <Mono>public.audit_trail</Mono>
-        {dbError ? ` (database unavailable: ${dbError})` : ""}. Session-only prototype events
-        (verify / tamper / restore / grants on demo documents) appear below them.
-      </p>
+        {dbError ? ` (database unavailable: ${dbError})` : ""}. Session-only prototype events appear
+        below them. This log is read-only in the UI — not yet cryptographically immutable.
+        <BtnLink to="/handoffs" variant="ghost" size="sm" className="ml-1 align-baseline">
+          Related transfers
+        </BtnLink>
+      </DemoNotice>
     </AppShell>
   );
 }

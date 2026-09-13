@@ -64,7 +64,7 @@ function AiProcessing() {
           const Icon = STAGE_ICONS[i]!;
           return (
           <div key={s.key} className="flex items-center gap-2">
-            <div className="rounded-md border border-border bg-card px-3 py-2">
+            <div className="rounded-sm border border-border bg-card px-3 py-2">
               <div className="flex items-center gap-2">
                 <Icon className="size-3.5 text-ai" />
                 <span className="text-[12.5px] font-medium">

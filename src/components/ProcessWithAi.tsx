@@ -136,6 +136,7 @@ export function ProcessWithAi({ doc }: { doc: Document }) {
       title={
         <span className="flex items-center gap-2">
           <Sparkles className="size-4 text-ai" /> AI document processing
+          <Badge tone="ai" className="ml-1">OCR · NER · classify</Badge>
         </span>
       }
     >
@@ -160,7 +161,7 @@ export function ProcessWithAi({ doc }: { doc: Document }) {
       </div>
 
       {error ? (
-        <div className="mt-3 flex items-start gap-2 rounded-md border border-alert/40 bg-alert-soft px-3 py-2.5">
+        <div className="mt-3 flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-3 py-2.5">
           <AlertTriangle className="mt-0.5 size-4 shrink-0 text-alert" />
           <p className="text-[12.5px] text-alert">{error}</p>
         </div>

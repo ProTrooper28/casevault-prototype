@@ -141,17 +141,20 @@ export function CreateFirModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button aria-label="Close" className="absolute inset-0 bg-foreground/40" onClick={onClose} />
-      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto border border-border bg-card shadow-xl">
-        <header className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-sm border border-border bg-card shadow-xl">
+        <header className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 text-sidebar-foreground">
           <div>
-            <h3 className="text-sm font-semibold">Register New FIR</h3>
-            <p className="text-[11.5px] text-muted-foreground">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              Register New FIR
+              <span aria-hidden className="tricolour-bar h-[3px] w-10 rounded-full" />
+            </h3>
+            <p className="text-[11.5px] text-sidebar-muted">
               {isSupabaseConfigured
                 ? "Saves as a permanent record in the case database."
                 : "Case database not connected — see Settings → Supabase database."}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Close dialog" className="p-1 hover:bg-secondary">
+          <button onClick={onClose} aria-label="Close dialog" className="p-1 hover:bg-sidebar-active">
             <X className="size-4" />
           </button>
         </header>
@@ -184,7 +187,7 @@ export function CreateFirModal({
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value as (typeof CASE_TYPES)[number])}
-                className="h-9 w-full rounded-md border border-input bg-card px-2.5 text-sm"
+                className="h-9 w-full rounded-sm border border-input bg-card px-2.5 text-sm"
               >
                 {CASE_TYPES.map((t) => (
                   <option key={t}>{t}</option>
@@ -276,7 +279,7 @@ export function CreateFirModal({
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={3}
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+              className="w-full rounded-sm border border-input bg-card px-3 py-2 text-sm"
               placeholder="Brief summary of the incident…"
             />
           </div>
@@ -320,7 +323,7 @@ export function CreateFirModal({
                 accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.mp4,.mp3,.txt"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 disabled={submitting}
-                className="block w-full rounded-md border border-input bg-card px-2.5 py-1.5 text-[13px] file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-[12px] file:font-medium"
+                className="block w-full rounded-sm border border-input bg-card px-2.5 py-1.5 text-[13px] file:mr-3 file:rounded-sm file:border-0 file:bg-secondary file:px-2 file:py-0.5 file:text-[12px] file:font-medium"
               />
             )}
             <p className="text-[11px] text-muted-foreground">

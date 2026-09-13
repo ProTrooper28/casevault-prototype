@@ -15,7 +15,7 @@ export function CasePeopleTab({ caseId }: { caseId: string }) {
 
   if (!c) {
     return (
-      <div className="border border-border bg-card px-4 py-10 text-center">
+      <div className="rounded-sm border border-border bg-card px-4 py-10 text-center">
         <p className="text-sm text-muted-foreground">Case record could not be loaded for this tab.</p>
       </div>
     );
@@ -47,7 +47,7 @@ export function CasePeopleTab({ caseId }: { caseId: string }) {
   ];
 
   return (
-    <div className="border border-border bg-card">
+    <div className="rounded-sm border border-border bg-card">
       <header className="border-b border-border px-4 py-2.5">
         <h2 className="text-sm font-semibold">People Associated with Case</h2>
         <p className="text-[11.5px] text-muted-foreground">

@@ -15,7 +15,7 @@ export function CaseAuditTab({ caseId }: { caseId: string }) {
   }
 
   return (
-    <div className="border border-border bg-card">
+    <div className="rounded-sm border border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold">

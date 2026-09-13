@@ -107,7 +107,7 @@ function DocumentViewer() {
   if (!doc) {
     return (
       <AppShell title="Document not found">
-        <div className="rounded-md border border-border bg-card px-4 py-14 text-center">
+        <div className="rounded-sm border border-border bg-card px-4 py-14 text-center">
           <p className="text-sm font-medium">No document with ID “{docId}”.</p>
           <Btn className="mt-4" onClick={() => navigate({ to: "/documents" })}>
             Back to vault

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Upload, X, CheckCircle2, FileWarning } from "lucide-react";
+import { Upload, X, CheckCircle2, FileWarning, ArrowLeftRight, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import { getCase } from "@/lib/mock-data";
@@ -21,6 +21,130 @@ const DOC_TYPES = [
   "Evidence Record",
   "Legal Notice",
 ] as const;
+
+/**
+ * Official secure-transfer confirmation for Send to Forensic.
+ * Shows case, document, integrity status and the SHA-256 fingerprint before
+ * the officer commits the handoff. Compromised documents are blocked.
+ */
+function SecureTransferModal({
+  caseId,
+  doc,
+  onClose,
+}: {
+  caseId: string;
+  doc: { id: string; name: string; type: string; integrity: "verified" | "pending" | "compromised"; hash: string };
+  onClose: () => void;
+}) {
+  const app = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function send() {
+    setBusy(true);
+    setError(null);
+    const result = await createHandoff({
+      caseId,
+      documentId: doc.id,
+      fromUser: app.session?.name ?? "Investigation Officer",
+      toUser: "Forensic Officer",
+      notes: `Sent for forensic review from ${caseId}`,
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    toast.success("Sent securely to Forensic", {
+      description: `${doc.name} is now Pending in the Forensic Officer's queue.`,
+    });
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button aria-label="Close" className="absolute inset-0 bg-foreground/40" onClick={onClose} />
+      <div className="relative w-full max-w-md overflow-hidden rounded-sm border border-border bg-card shadow-xl">
+        <header className="flex items-center justify-between border-b border-border bg-sidebar px-4 py-3 text-sidebar-foreground">
+          <div className="flex items-center gap-2">
+            <Lock className="size-4 text-gold" />
+            <div>
+              <h3 className="text-sm font-semibold">Secure Transfer to Forensic</h3>
+              <p className="text-[11px] text-sidebar-muted">Confirm the package before transfer</p>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="p-1 hover:bg-sidebar-active">
+            <X className="size-4" />
+          </button>
+        </header>
+
+        <div className="space-y-3 px-4 py-4">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-[13px]">
+            <div className="min-w-0">
+              <dt className="label-caps">Case / FIR</dt>
+              <dd className="mt-0.5 font-mono font-semibold">{caseId}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="label-caps">Document Type</dt>
+              <dd className="mt-0.5 font-medium">{doc.type}</dd>
+            </div>
+            <div className="col-span-2 min-w-0">
+              <dt className="label-caps">Document</dt>
+              <dd className="mt-0.5 truncate font-medium">{doc.name}</dd>
+            </div>
+            <div>
+              <dt className="label-caps">Integrity Status</dt>
+              <dd className="mt-0.5">
+                <IntegrityBadge status={doc.integrity} />
+              </dd>
+            </div>
+            <div>
+              <dt className="label-caps">Transfer</dt>
+              <dd className="mt-0.5 text-[12.5px] leading-snug">
+                <span className="font-medium">Investigation Officer</span>
+                <span className="block text-muted-foreground">→ Forensic Department</span>
+              </dd>
+            </div>
+          </dl>
+
+          <div>
+            <p className="label-caps">SHA-256 Fingerprint</p>
+            <Mono className="mt-1 block rounded-sm bg-muted px-2.5 py-1.5 text-[11px] break-all">
+              {doc.hash}
+            </Mono>
+          </div>
+
+          {doc.integrity === "compromised" ? (
+            <p className="flex items-start gap-2 border border-alert/40 bg-alert-soft px-3 py-2 text-[12.5px] text-alert">
+              <FileWarning className="mt-0.5 size-3.5 shrink-0" />
+              This document is compromised — transfer is blocked until its integrity is restored.
+            </p>
+          ) : null}
+          {error ? (
+            <p className="flex items-start gap-2 border border-destructive/40 bg-destructive/10 px-3 py-2 text-[12.5px] text-destructive">
+              <FileWarning className="mt-0.5 size-3.5 shrink-0" /> {error}
+            </p>
+          ) : null}
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+          <Btn variant="outline" size="sm" onClick={onClose} disabled={busy}>
+            Cancel
+          </Btn>
+          <Btn
+            size="sm"
+            onClick={send}
+            disabled={busy || doc.integrity === "compromised"}
+            title={doc.integrity === "compromised" ? "Integrity compromised — transfer blocked" : undefined}
+          >
+            <Lock className="size-3.5" />
+            {busy ? "Transferring…" : "Send Securely to Forensic"}
+          </Btn>
+        </footer>
+      </div>
+    </div>
+  );
+}
 
 function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void }) {
   const [docType, setDocType] = useState<(typeof DOC_TYPES)[number]>("FIR");
@@ -174,31 +298,15 @@ function UploadModal({ caseId, onClose }: { caseId: string; onClose: () => void 
 export function CaseDocumentsTab({ caseId }: { caseId: string }) {
   const app = useApp();
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [handoffDoc, setHandoffDoc] = useState<{ id: string; name: string; type: string; integrity: "verified" | "pending" | "compromised"; hash: string } | null>(null);
   const navigate = useNavigate();
   const { documents: dbDocs } = useSupabaseRecords();
   const c = getCase(caseId);
   const docs = [...dbDocs, ...allDocuments(app)].filter((d) => d.caseId === caseId);
   const canUpload = isPoliceSession();
 
-  async function sendToForensic(docId: string, docName: string) {
-    const result = await createHandoff({
-      caseId,
-      documentId: docId,
-      fromUser: app.session?.name ?? "Investigation Officer",
-      toUser: "Forensic Officer",
-      notes: `Sent for forensic review from ${caseId}`,
-    });
-    if (!result.ok) {
-      toast.error("Handoff not created", { description: result.error });
-      return;
-    }
-    toast.success("Sent to Forensic", {
-      description: `${docName} is now Pending in the Forensic Officer's queue.`,
-    });
-  }
-
   return (
-    <div className="border border-border bg-card">
+    <div className="rounded-sm border border-border bg-card">
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <div>
           <h2 className="text-sm font-semibold">Document Register</h2>
@@ -218,12 +326,11 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse">
+        <table className="w-full min-w-[820px] border-collapse">
           <thead>
             <tr>
               <Th className="px-4">Document</Th>
               <Th>Type</Th>
-              <Th>Version</Th>
               <Th>Uploaded By</Th>
               <Th>Date</Th>
               <Th>Integrity</Th>
@@ -233,9 +340,9 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
           <tbody>
             {docs.map((d) => {
               const resolved = findDocument(d.id);
-              const version = "version" in d ? d.version : "?";
               const uploadedBy = "uploadedBy" in d ? d.uploadedBy : "—";
               const date = "date" in d ? d.date : "—";
+              const integrity = resolved?.integrity ?? d.integrity;
               return (
                 <tr key={d.id} className="hover:bg-secondary/50">
                   <Td className="px-4">
@@ -243,11 +350,10 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                     <Mono className="text-[11px] text-muted-foreground">{d.id}</Mono>
                   </Td>
                   <Td className="whitespace-nowrap text-muted-foreground">{d.type}</Td>
-                  <Td className="whitespace-nowrap">v{version}</Td>
                   <Td className="whitespace-nowrap">{uploadedBy}</Td>
                   <Td className="whitespace-nowrap text-muted-foreground">{date}</Td>
                   <Td>
-                    <IntegrityBadge status={resolved?.integrity ?? d.integrity} />
+                    <IntegrityBadge status={integrity} />
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-1.5 pr-4">
@@ -259,10 +365,18 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
                       </button>
                       {canUpload ? (
                         <button
-                          onClick={() => void sendToForensic(d.id, d.name)}
-                          className="border border-border px-2 py-0.5 text-[12px] font-medium hover:bg-secondary"
+                          onClick={() =>
+                            setHandoffDoc({
+                              id: d.id,
+                              name: d.name,
+                              type: d.type,
+                              integrity,
+                              hash: ("hash" in d ? d.hash : "") || "—",
+                            })
+                          }
+                          className="inline-flex items-center gap-1 border border-border px-2 py-0.5 text-[12px] font-medium hover:bg-secondary"
                         >
-                          Send to Forensic
+                          <ArrowLeftRight className="size-3" /> Send to Forensic
                         </button>
                       ) : null}
                       <button
@@ -280,14 +394,18 @@ export function CaseDocumentsTab({ caseId }: { caseId: string }) {
             })}
             {docs.length === 0 ? (
               <tr>
-                <Td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                <Td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
                   No documents on file for this case yet.
                 </Td>
               </tr>
             ) : null}
           </tbody>
         </table>
-      </div>      {uploadOpen ? <UploadModal caseId={caseId} onClose={() => setUploadOpen(false)} /> : null}
+      </div>
+      {uploadOpen ? <UploadModal caseId={caseId} onClose={() => setUploadOpen(false)} /> : null}
+      {handoffDoc ? (
+        <SecureTransferModal caseId={caseId} doc={handoffDoc} onClose={() => setHandoffDoc(null)} />
+      ) : null}
     </div>
   );
 }

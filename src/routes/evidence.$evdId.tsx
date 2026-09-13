@@ -88,7 +88,7 @@ function EvidenceDetail() {
   if (!item) {
     return (
       <AppShell title="Evidence not found">
-        <div className="border border-border bg-card px-4 py-14 text-center">
+        <div className="rounded-sm border border-border bg-card px-4 py-14 text-center">
           <p className="text-sm font-medium">No evidence item “{evdId}” exists in this vault.</p>
           <Btn className="mt-4" onClick={() => navigate({ to: "/evidence" })}>
             Back to evidence register
@@ -111,10 +111,10 @@ function EvidenceDetail() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Item record */}
-        <div className="border border-border bg-card">
-          <header className="border-b border-border px-4 py-2.5">
-            <h2 className="text-sm font-semibold">Evidence Record</h2>
-          </header>
+      <div className="rounded-sm border border-border bg-card">
+        <header className="border-b border-border px-4 py-2.5">
+          <h2 className="text-sm font-semibold">Evidence Record</h2>
+        </header>
           <dl className="space-y-3 px-4 py-4 text-[13px]">
             <div className="flex items-center justify-between gap-3">
               <dt className="label-caps">Evidence ID</dt>
@@ -171,72 +171,90 @@ function EvidenceDetail() {
           </dl>
         </div>
 
-        {/* Chain of custody */}
-        <div className="border border-border bg-card lg:col-span-2">
+        {/* Chain of custody — official vertical timeline */}
+        <div className="rounded-sm border border-border bg-card lg:col-span-2">
           <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">Chain of Custody</h2>
             <span className="text-[11.5px] text-muted-foreground">
               {item.chain.length} recorded transfers · append-only
             </span>
           </header>
-          <div className="px-4 py-4">
+          <div className="px-4 py-5">
             <ol>
-              {item.chain.map((step, i) => (
-                <li key={`${step.stage}-${i}`} className="relative flex gap-4 pl-6">
-                  {i < item.chain.length - 1 ? (
-                    <span className="absolute top-5 bottom-[-1.25rem] left-[5px] w-px bg-border-strong" />
-                  ) : null}
-                  <span
-                    className={
-                      "absolute top-[6px] left-0 size-[11px] rounded-full border-2 border-card " +
-                      (i === item.chain.length - 1 ? "bg-primary" : "bg-success")
-                    }
-                  />
-                  <div className="min-w-0 flex-1 pb-4">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                      <h3 className="text-[13.5px] font-semibold">{step.stage}</h3>
-                      <span className="font-mono text-[11.5px] whitespace-nowrap text-muted-foreground">
-                        {step.date} · {step.time}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[12.5px] text-muted-foreground">{step.action}</p>
-                    <p className="mt-0.5 text-[12px]">
-                      <span className="label-caps">Person</span>{" "}
-                      <span className="font-medium">{step.person}</span>
-                      {step.from_department && step.to_department ? (
-                        <span className="ml-3">
-                          <span className="label-caps">Transfer</span>{" "}
-                          <span className="font-medium">
-                            {step.from_department} → {step.to_department}
-                          </span>
-                        </span>
-                      ) : null}
-                      {step.status ? (
-                        <Badge
-                          tone={
-                            step.status === "Success"
-                              ? "success"
-                              : step.status === "Blocked"
-                                ? "alert"
-                                : "warning"
-                          }
-                          className="ml-3"
-                        >
-                          {step.status}
-                        </Badge>
-                      ) : null}
-                    </p>
-                    {step.sha256 ? (
-                      <p className="mt-1.5">
-                        <span className="label-caps">SHA-256 at this stage</span>
-                        <Mono className="mt-0.5 block bg-muted px-2 py-1 text-[10.5px] break-all">
-                          {step.sha256}
-                        </Mono>
-                      </p>
+              {item.chain.map((step, i) => {
+                const last = i === item.chain.length - 1;
+                const alertStep = step.status === "Blocked";
+                const warnStep = step.status === "Warning";
+                return (
+                  <li key={`${step.stage}-${i}`} className="relative flex gap-4 pl-1">
+                    {i < item.chain.length - 1 ? (
+                      <span className="absolute top-6 bottom-[-1.5rem] left-[10px] w-px bg-border-strong" />
                     ) : null}
-                  </div>
-                </li>
-              ))}
+                    <span
+                      className={
+                        "relative z-10 mt-0.5 flex size-[21px] shrink-0 items-center justify-center rounded-full border-2 border-card ring-1 " +
+                        (alertStep
+                          ? "bg-alert ring-alert/30"
+                          : warnStep
+                            ? "bg-warning ring-warning/30"
+                            : last
+                              ? "bg-primary ring-primary/30"
+                              : "bg-success ring-success/30")
+                      }
+                    >
+                      {alertStep ? (
+                        <ShieldAlert className="size-3 text-white" />
+                      ) : (
+                        <ShieldCheck className="size-3 text-white" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1 pb-5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <h3 className="text-[13.5px] font-semibold tracking-wide">{step.stage}</h3>
+                        <span className="font-mono text-[11.5px] whitespace-nowrap text-muted-foreground">
+                          {step.date} · {step.time}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[12.5px] text-muted-foreground">{step.action}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+                        <span>
+                          <span className="label-caps">User</span>{" "}
+                          <span className="font-medium">{step.person}</span>
+                        </span>
+                        {step.from_department && step.to_department ? (
+                          <span>
+                            <span className="label-caps">Transfer</span>{" "}
+                            <span className="font-medium">
+                              {step.from_department} → {step.to_department}
+                            </span>
+                          </span>
+                        ) : null}
+                        {step.status ? (
+                          <Badge
+                            tone={
+                              step.status === "Success"
+                                ? "success"
+                                : step.status === "Blocked"
+                                  ? "alert"
+                                  : "warning"
+                            }
+                          >
+                            {step.status}
+                          </Badge>
+                        ) : null}
+                      </p>
+                      {step.sha256 ? (
+                        <p className="mt-2">
+                          <span className="label-caps">SHA-256 at this stage</span>
+                          <Mono className="mt-0.5 block rounded-sm bg-muted px-2.5 py-1.5 text-[10.5px] break-all">
+                            {step.sha256}
+                          </Mono>
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
             <div className="flex items-center gap-2 border-t border-border pt-3 text-[12px] text-muted-foreground">
               {item.integrity === "compromised" ? (

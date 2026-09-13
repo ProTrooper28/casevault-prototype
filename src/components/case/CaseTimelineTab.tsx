@@ -304,7 +304,7 @@ export function CaseTimelineTab({ caseId }: { caseId: string }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <div className="border border-border bg-card lg:col-span-2">
+      <div className="rounded-sm border border-border bg-card lg:col-span-2">
         <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
           <h2 className="text-sm font-semibold">Investigation Chronology</h2>
           <span className="text-[11.5px] text-muted-foreground">
@@ -321,7 +321,7 @@ export function CaseTimelineTab({ caseId }: { caseId: string }) {
       </div>
 
       <div className="space-y-4">
-        <div className="border border-border bg-card">
+        <div className="rounded-sm border border-border bg-card">
           <header className="border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">Evidence added this session</h2>
           </header>
@@ -348,7 +348,7 @@ export function CaseTimelineTab({ caseId }: { caseId: string }) {
           </div>
         </div>
 
-        <div className="border border-border bg-card px-4 py-3 text-[12px] text-muted-foreground">
+        <div className="rounded-sm border border-border bg-card px-4 py-3 text-[12px] text-muted-foreground">
           <p className="font-medium text-foreground">Chronology rules</p>
           <p className="mt-1 leading-relaxed">
             Events are append-only. Every evidence item added here receives an ID, a SHA-256

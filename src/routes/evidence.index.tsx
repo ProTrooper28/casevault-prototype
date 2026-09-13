@@ -17,7 +17,7 @@ function EvidencePage() {
         title="Evidence Register"
         description="All registered evidence across cases. Open an item to view its chain of custody."
       />
-      <div className="overflow-x-auto border border-border bg-card">
+      <div className="overflow-x-auto rounded-sm border border-border bg-card">
         <table className="w-full min-w-[900px] border-collapse">
           <thead>
             <tr>

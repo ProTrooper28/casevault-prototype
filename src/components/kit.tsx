@@ -6,11 +6,18 @@ import { CheckCircle2, Clock, ShieldAlert, Info } from "lucide-react";
 
 /* ---------------------------------- Button --------------------------------- */
 
-type BtnVariant = "primary" | "outline" | "ghost" | "subtle" | "danger" | "ai";
-type BtnSize = "sm" | "md";
+type BtnVariant =
+  | "primary"
+  | "outline"
+  | "ghost"
+  | "subtle"
+  | "danger"
+  | "success"
+  | "ai";
+type BtnSize = "sm" | "md" | "lg";
 
 const btnBase =
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 rounded-sm text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap";
 
 const btnVariants: Record<BtnVariant, string> = {
   primary: "bg-primary text-primary-foreground hover:bg-primary-hover",
@@ -18,12 +25,14 @@ const btnVariants: Record<BtnVariant, string> = {
   ghost: "text-foreground hover:bg-secondary",
   subtle: "bg-secondary text-secondary-foreground hover:bg-accent",
   danger: "bg-alert text-alert-foreground hover:opacity-90",
+  success: "bg-success text-success-foreground hover:opacity-90",
   ai: "bg-ai text-ai-foreground hover:opacity-90",
 };
 
 const btnSizes: Record<BtnSize, string> = {
   sm: "h-8 px-2.5 text-[13px]",
   md: "h-9 px-3.5",
+  lg: "h-10 px-5 text-sm font-semibold",
 };
 
 export function Btn({
@@ -73,13 +82,13 @@ export function Panel({
   return (
     <section
       className={cn(
-        "rounded-md border border-border bg-card shadow-[0_1px_2px_0_oklch(0.25_0.05_258/0.06)]",
+        "rounded-sm border border-border bg-card shadow-[0_1px_2px_0_oklch(0.25_0.05_258/0.06)]",
         className,
       )}
     >
       {title ? (
         <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">{title}</h2>
           {action}
         </header>
       ) : null}
@@ -90,7 +99,7 @@ export function Panel({
 
 /* --------------------------------- Badges ---------------------------------- */
 
-type Tone = "neutral" | "info" | "success" | "warning" | "alert" | "ai";
+type Tone = "neutral" | "info" | "success" | "warning" | "alert" | "ai" | "gold";
 
 const toneClasses: Record<Tone, string> = {
   neutral: "bg-secondary text-secondary-foreground border-border-strong",
@@ -99,6 +108,7 @@ const toneClasses: Record<Tone, string> = {
   warning: "bg-warning-soft text-warning border-warning/30",
   alert: "bg-alert-soft text-alert border-alert/30",
   ai: "bg-ai-soft text-ai border-ai/25",
+  gold: "border-gold/40 bg-gold/10 text-[oklch(0.5_0.1_85)]",
 };
 
 export function Badge({
@@ -113,7 +123,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
         toneClasses[tone],
         className,
       )}
@@ -175,7 +185,7 @@ export function PageIntro({
 
 export function DemoNotice({ children }: { children?: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+    <div className="flex items-start gap-2 rounded-sm border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
       <Info className="mt-0.5 size-3.5 shrink-0" />
       <p>
         {children ??

@@ -94,7 +94,7 @@ function AccessManagement() {
           { label: "Active grants", value: grants.filter((g) => g.status === "Active").length, icon: UserPlus },
           { label: "Expiring grants", value: grants.filter((g) => g.status !== "Active").length, icon: X },
         ].map((s) => (
-          <div key={s.label} className="rounded-md border border-border bg-card px-4 py-3">
+          <div key={s.label} className="rounded-sm border border-border bg-card px-4 py-3">
             <div className="flex items-center justify-between">
               <span className="label-caps">{s.label}</span>
               <s.icon className="size-4 text-muted-foreground" />
@@ -218,7 +218,7 @@ function AccessManagement() {
             className="absolute inset-0 bg-foreground/40"
             onClick={() => setOpen(false)}
           />
-          <div className="relative w-full max-w-md rounded-md border border-border bg-card p-5 shadow-xl">
+          <div className="relative w-full max-w-md rounded-sm border border-border bg-card p-5 shadow-xl">
             <h3 className="text-sm font-semibold">Grant access</h3>
             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
               Adds a scoped grant to frontend state and writes an audit entry.

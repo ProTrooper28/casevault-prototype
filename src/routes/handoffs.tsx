@@ -1,17 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-  ArrowLeftRight,
-  ArrowRight,
   CheckCircle2,
   FileWarning,
   Inbox,
   ShieldCheck,
   XCircle,
+  ArrowLeftRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { Badge, Btn, Mono } from "@/components/kit";
+import { GovBanner } from "@/components/gov";
+import { Badge, Btn, IntegrityBadge, Mono, Td, Th } from "@/components/kit";
 import {
   currentActor,
   findDocument,
@@ -39,7 +39,8 @@ function HandoffsInbox() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const pending = handoffs.filter((h) => h.status === "Pending");
-  const decided = handoffs.filter((h) => h.status !== "Pending");
+  const accepted = handoffs.filter((h) => h.status === "Accepted");
+  const rejected = handoffs.filter((h) => h.status === "Rejected");
 
   async function decide(
     id: string,
@@ -80,8 +81,26 @@ function HandoffsInbox() {
 
   return (
     <AppShell title="Forensic Handoffs">
+      <GovBanner
+        title="Forensic Department"
+        subtitle="Review incoming case documents and maintain evidence integrity."
+        aside={
+          <div className="flex items-center gap-2 text-right">
+            <span className="flex size-9 items-center justify-center rounded-sm border border-white/15 bg-white/10">
+              <ArrowLeftRight className="size-4 text-[#9CC4F5]" />
+            </span>
+            <div className="text-left">
+              <p className="text-[10.5px] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
+                Transfer Queue
+              </p>
+              <p className="text-[12.5px] font-medium">{pending.length} awaiting decision</p>
+            </div>
+          </div>
+        }
+      />
+
       {!forensic ? (
-        <div className="border border-border bg-card px-4 py-10 text-center">
+        <div className="rounded-sm border border-border bg-card px-4 py-10 text-center">
           <p className="text-sm font-medium">Forensic review workspace</p>
           <p className="mx-auto mt-1 max-w-md text-[13px] text-muted-foreground">
             This queue belongs to the Forensic Officer demo role. Police officers send handoffs from
@@ -90,23 +109,20 @@ function HandoffsInbox() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border border-border bg-card px-4 py-2.5 text-[13px]">
-            <span className="label-caps">Incoming queue</span>
+          {/* Status summary strip */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-sm border border-border bg-card px-4 py-2.5 text-[13px]">
+            <span className="label-caps">Incoming Forensic Handoffs</span>
             <span className="flex items-baseline gap-1.5">
               <span className="label-caps">Pending</span>
-              <span className="font-semibold tabular-nums">{pending.length}</span>
+              <span className="font-semibold tabular-nums text-warning">{pending.length}</span>
             </span>
             <span className="flex items-baseline gap-1.5">
               <span className="label-caps">Accepted</span>
-              <span className="font-semibold tabular-nums text-success">
-                {handoffs.filter((h) => h.status === "Accepted").length}
-              </span>
+              <span className="font-semibold tabular-nums text-success">{accepted.length}</span>
             </span>
             <span className="flex items-baseline gap-1.5">
               <span className="label-caps">Rejected</span>
-              <span className="font-semibold tabular-nums text-alert">
-                {handoffs.filter((h) => h.status === "Rejected").length}
-              </span>
+              <span className="font-semibold tabular-nums text-alert">{rejected.length}</span>
             </span>
             <span className="ml-auto flex items-center gap-2 text-[11.5px] text-muted-foreground">
               <Inbox className="size-3.5" /> Sent by the Investigation Officer
@@ -114,7 +130,7 @@ function HandoffsInbox() {
           </div>
 
           {error ? (
-            <div className="flex items-start gap-2 border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
+            <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
               <FileWarning className="mt-0.5 size-4 shrink-0" />
               <span>
                 Could not load handoffs from the database: {error} — check the{" "}
@@ -123,34 +139,35 @@ function HandoffsInbox() {
             </div>
           ) : null}
           {actionError ? (
-            <div className="flex items-start gap-2 border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
+            <div className="flex items-start gap-2 rounded-sm border border-alert/40 bg-alert-soft px-4 py-3 text-[13px] text-alert">
               <FileWarning className="mt-0.5 size-4 shrink-0" />
               <span>Action not saved: {actionError}</span>
             </div>
           ) : null}
 
-          <div className="overflow-x-auto border border-border bg-card">
-            <table className="w-full min-w-[900px] border-collapse">
+          <div className="overflow-x-auto rounded-sm border border-border bg-card">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead>
-                <tr className="border-b border-border text-left">
-                  <ThCell>Case</ThCell>
-                  <ThCell>Document</ThCell>
-                  <ThCell>From</ThCell>
-                  <ThCell>Status</ThCell>
-                  <ThCell>Sent</ThCell>
-                  <ThCell>Decision</ThCell>
+                <tr>
+                  <Th className="px-4">Case / FIR</Th>
+                  <Th>Document</Th>
+                  <Th>Sent By</Th>
+                  <Th>Sent At</Th>
+                  <Th>Integrity</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
               <tbody>
                 {loading && handoffs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[13px] text-muted-foreground">
+                    <td colSpan={7} className="px-4 py-8 text-center text-[13px] text-muted-foreground">
                       Loading handoffs from Supabase…
                     </td>
                   </tr>
                 ) : handoffs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center">
+                    <td colSpan={7} className="px-4 py-10 text-center">
                       <p className="text-[13px] font-medium">No forensic handoffs yet</p>
                       <p className="mt-1 text-[12px] text-muted-foreground">
                         When the Investigation Officer sends a document for forensic review, it
@@ -163,20 +180,20 @@ function HandoffsInbox() {
                     const doc = h.documentId ? findDocument(h.documentId) : undefined;
                     return (
                       <tr key={h.id} className="border-b border-border/60 hover:bg-secondary/40">
-                        <TdCell>
+                        <Td className="px-4">
                           <button
                             className="font-medium text-primary hover:underline"
                             onClick={() =>
                               navigate({ to: "/cases/$caseId", params: { caseId: h.caseId } })
                             }
                           >
-                            <Mono className="text-[12.5px]">{h.caseId}</Mono>
+                            <Mono className="text-[12.5px] font-semibold">{h.caseId}</Mono>
                           </button>
-                        </TdCell>
-                        <TdCell>
+                        </Td>
+                        <Td>
                           {doc ? (
                             <button
-                              className="text-left hover:underline"
+                              className="max-w-[240px] truncate text-left font-medium hover:underline"
                               onClick={() =>
                                 navigate({
                                   to: "/documents/$docId",
@@ -191,16 +208,39 @@ function HandoffsInbox() {
                               {h.documentId ?? "Whole case"}
                             </span>
                           )}
+                          {doc ? (
+                            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                              {doc.type}
+                            </span>
+                          ) : null}
                           {h.notes ? (
-                            <span className="mt-0.5 block max-w-[280px] truncate text-[11.5px] text-muted-foreground">
+                            <span className="mt-0.5 block max-w-[260px] truncate text-[11px] text-muted-foreground">
                               {h.notes}
                             </span>
                           ) : null}
-                        </TdCell>
-                        <TdCell className="whitespace-nowrap text-muted-foreground">
-                          {h.fromUser}
-                        </TdCell>
-                        <TdCell>
+                        </Td>
+                        <Td className="whitespace-nowrap">
+                          <p className="font-medium">{h.fromUser}</p>
+                          <p className="text-[11px] text-muted-foreground">Police Department</p>
+                        </Td>
+                        <Td className="whitespace-nowrap text-[12px] text-muted-foreground">
+                          {new Date(h.createdAt).toLocaleString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false,
+                          })}
+                        </Td>
+                        <Td>
+                          {doc ? (
+                            <IntegrityBadge status={doc.integrity} />
+                          ) : (
+                            <span className="text-[12px] text-muted-foreground">—</span>
+                          )}
+                        </Td>
+                        <Td>
                           <Badge
                             tone={
                               h.status === "Pending"
@@ -212,11 +252,13 @@ function HandoffsInbox() {
                           >
                             {h.status}
                           </Badge>
-                        </TdCell>
-                        <TdCell className="whitespace-nowrap text-[12px] text-muted-foreground">
-                          {new Date(h.createdAt).toLocaleString("en-IN")}
-                        </TdCell>
-                        <TdCell>
+                          {h.status === "Rejected" && h.rejectionReason ? (
+                            <span className="mt-0.5 block max-w-[180px] truncate text-[11px] text-muted-foreground">
+                              {h.rejectionReason}
+                            </span>
+                          ) : null}
+                        </Td>
+                        <Td>
                           {h.status === "Pending" ? (
                             rejectingId === h.id ? (
                               <div className="flex min-w-[260px] flex-col gap-2">
@@ -224,11 +266,12 @@ function HandoffsInbox() {
                                   value={reason}
                                   onChange={(e) => setReason(e.target.value)}
                                   placeholder="Rejection reason (required)"
-                                  className="w-full rounded-none border border-input bg-card px-2.5 py-1.5 text-[13px]"
+                                  className="w-full rounded-sm border border-input bg-card px-2.5 py-1.5 text-[13px]"
                                 />
                                 <div className="flex gap-2">
                                   <Btn
                                     size="sm"
+                                    variant="danger"
                                     disabled={!reason.trim() || busyId === h.id}
                                     onClick={() =>
                                       decide(h.id, "reject", doc?.name ?? null, h.caseId, reason)
@@ -250,9 +293,10 @@ function HandoffsInbox() {
                                 </div>
                               </div>
                             ) : (
-                              <div className="flex gap-2">
+                              <div className="flex justify-end gap-1.5 pr-3">
                                 <Btn
                                   size="sm"
+                                  variant="success"
                                   disabled={busyId === h.id}
                                   onClick={() => decide(h.id, "accept", doc?.name ?? null, h.caseId)}
                                 >
@@ -270,15 +314,17 @@ function HandoffsInbox() {
                               </div>
                             )
                           ) : (
-                            <span className="text-[12.5px] text-muted-foreground">
-                              {h.status === "Accepted" && h.acceptedAt
-                                ? `Accepted ${new Date(h.acceptedAt).toLocaleDateString("en-IN")}`
-                                : h.status === "Rejected"
-                                  ? `Reason: ${h.rejectionReason ?? "—"}`
-                                  : "—"}
-                            </span>
+                            <div className="flex justify-end pr-3">
+                              <span className="text-[12.5px] text-muted-foreground">
+                                {h.status === "Accepted" && h.acceptedAt
+                                  ? `Accepted ${new Date(h.acceptedAt).toLocaleDateString("en-IN")}`
+                                  : h.status === "Rejected"
+                                    ? `Reason: ${h.rejectionReason ?? "—"}`
+                                    : "—"}
+                              </span>
+                            </div>
                           )}
-                        </TdCell>
+                        </Td>
                       </tr>
                     );
                   })
@@ -287,27 +333,16 @@ function HandoffsInbox() {
             </table>
           </div>
 
-          {decided.length > 0 ? (
+          {rejected.length + accepted.length > 0 ? (
             <p className="text-[11.5px] text-muted-foreground">
-              {decided.length} decided handoff{decided.length === 1 ? "" : "s"} shown below the
-              pending queue — status is read live from <Mono>public.workflow_handoffs</Mono>.
-              <ArrowRight className="ml-1 inline size-3" />
+              {accepted.length + rejected.length} decided handoff
+              {accepted.length + rejected.length === 1 ? "" : "s"} remain listed with their decision
+              — status is read live from <Mono>public.workflow_handoffs</Mono>.
+              <ShieldCheck className="ml-1 inline size-3 text-success" />
             </p>
           ) : null}
         </>
       )}
     </AppShell>
   );
-}
-
-function ThCell({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-4 py-2 text-[10.5px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
-      {children}
-    </th>
-  );
-}
-
-function TdCell({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-2.5 align-middle text-[13px] ${className ?? ""}`}>{children}</td>;
 }

@@ -14,9 +14,13 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/cases/")({
   component: Cases,
-  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+  validateSearch: (search: Record<string, unknown>): { q?: string; create?: boolean } => {
     const q = search["q"];
-    return typeof q === "string" ? { q } : {};
+    const create = search["create"];
+    return {
+      ...(typeof q === "string" ? { q } : {}),
+      ...(create === true ? { create: true } : {}),
+    };
   },
 });
 
@@ -39,7 +43,8 @@ function Cases() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [sort, setSort] = useState<Sort>("Last Updated");
   const { cases: dbCases, loading: dbLoading, error: dbError, refresh: refreshCases } = useCases();
-  const [showCreateFir, setShowCreateFir] = useState(false);
+  const searchCreate = Route.useSearch().create === true;
+  const [showCreateFir, setShowCreateFir] = useState(searchCreate);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

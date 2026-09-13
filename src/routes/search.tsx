@@ -135,7 +135,7 @@ function SmartSearch() {
       <DemoNotice />
 
       {/* Search box */}
-      <div className="rounded-md border border-border bg-card p-4">
+      <div className="rounded-sm border border-border bg-card p-4">
         <form
           className="flex flex-wrap items-center gap-2"
           onSubmit={(e) => {
@@ -201,7 +201,7 @@ function SmartSearch() {
         {results.map((r) => (
           <div
             key={`${r.kind}-${r.id}`}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border border-border bg-card px-4 py-3 transition-colors hover:bg-secondary/60"
+            className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-border bg-card px-4 py-3 transition-colors hover:bg-secondary/60"
           >
             <span
               className={cn(
